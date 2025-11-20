@@ -1,172 +1,37 @@
 {
   "seasons": [
     {
-      "title": "Season 1",
-      "logo": "Bfdi_logo.jpg",
+      "title": "",
+      "logo": "",
       "episodes": [
         {
-          "title": "BFDI 1a: Take the Plunge",
-          "path": "season 1/BFDI 1a_ Take the Plunge.mp4",
-          "subtitle": "season 1/captions/[English] BFDI 1a_ Take the Plunge [DownSub.com].srt",
-          "thumbnail": "season 1/thumnails/Ep1part1.jpg"
+          "title": "",
+          "path": "",
+          "subtitle": "",
+          "thumbnail": ""
         },
         {
-          "title": "BFDI 1b: Take the Plunge",
-          "path": "season 1/BFDI 1b_ Take the Plunge.mp4",
-          "subtitle": "season 1/captions/[English] BFDI 1b_ Take the Plunge [DownSub.com].srt",
-          "thumbnail": "season 1/thumnails/Ep1part2.jpg"
+          "title": "",
+          "path": "",
+          "subtitle": "",
+          "thumbnail": ""
         }
-        ,
-        { "title": "BFDI 2: Barriers and Pitfalls",  "path": "season 1/BFDI 2_ Barriers and Pitfalls.mp4",  "subtitle": "season 1/captions/[English] BFDI 2_ Barriers and Pitfalls [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep2.jpg" },
-        { "title": "BFDI 3: Are You Smarter Than a Snowball?",  "path": "season 1/BFDI 3_ Are You Smarter Than a Snowball_.mp4",  "subtitle": "season 1/captions/[English] BFDI 3_ Are You Smarter Than a Snowball_ [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep3.jpg" },
-        { "title": "BFDI 4: Sweet Tooth",  "path": "season 1/BFDI 4_ Sweet Tooth.mp4",  "subtitle": "season 1/captions/[English] BFDI 4_ Sweet Tooth [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep4.jpg" },
-        { "title": "BFDI 5: Bridge Crossing",  "path": "season 1/BFDI 5_ Bridge Crossing.mp4",  "subtitle": "season 1/captions/[English] BFDI 5_ Bridge Crossing [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep5.jpg" },
-        { "title": "BFDI 6: Power of Three",  "path": "season 1/BFDI 6_ Power of Three.mp4",  "subtitle": "season 1/captions/[English] BFDI 6_ Power of Three [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep6.jpg" },
-        { "title": "BFDI 7: Puzzling Mysteries",  "path": "season 1/BFDI 7_ Puzzling Mysteries.mp4",  "subtitle": "season 1/captions/[English] BFDI 7_ Puzzling Mysteries [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep7.jpg" },
-        { "title": "BFDI 8: Cycle of Life",  "path": "season 1/BFDI 8_ Cycle of Life.mp4",  "subtitle": "season 1/captions/[English] BFDI 8_ Cycle of Life [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep8.jpg" },
-        { "title": "BFDI 9: Insectophobe's Nightmare",  "path": "season 1/BFDI 9_ Insectophobe's Nightmare.mp4",  "subtitle": "season 1/captions/[English] BFDI 9_ Insectophobe's Nightmare [DownSub.com].srt",  "thumbnail": "season 1/thumnails/Ep9.jpg" },
-        { "title": "BFDI 10: Crybaby!", "path": "season 1/BFDI 10_ Crybaby!.mp4", "subtitle": "season 1/captions/[English] BFDI 10_ Crybaby! [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep10.jpg" },
-        { "title": "BFDI 11: Lofty", "path": "season 1/BFDI 11_ Lofty.mp4", "subtitle": "season 1/captions/[English] BFDI 11_ Lofty [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep11.jpg" },
-        { "title": "BFDI 12: A Leg Up in the Race", "path": "season 1/BFDI 12_ A Leg Up in the Race.mp4", "subtitle": "season 1/captions/[English] BFDI 12_ A Leg Up in the Race [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep12.jpg" },
-        { "title": "BFDI 13: Don't Lose Your Marbles", "path": "season 1/BFDI 13_ Don't Lose Your Marbles.mp4", "subtitle": "season 1/captions/[English] BFDI 13_ Don't Lose Your Marbles [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep13.jpg" },
-        { "title": "BFDI 14: Half a Loaf Is Better Than None", "path": "season 1/BFDI 14_ Half a Loaf Is Better Than None.mp4", "subtitle": "season 1/captions/[English] BFDI 14_ Half a Loaf Is Better Than None [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep14.jpg" },
-        { "title": "BFDI 15: Vomitaco", "path": "season 1/BFDI 15_ Vomitaco.mp4", "subtitle": "season 1/captions/[English] BFDI 15_ Vomitaco [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep15.jpg" },
-        { "title": "BFDI 16: Bowling, Now with Explosions!", "path": "season 1/BFDI 16_ Bowling, Now with Explosions!.mp4", "subtitle": "season 1/captions/[English] BFDI 16_ Bowling, Now with Explosions! [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep16.jpg" },
-        { "title": "BFDI 17: The Reveal", "path": "season 1/BFDI 17_ The Reveal.mp4", "subtitle": "season 1/captions/[English] BFDI 17_ The Reveal [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep17.jpg" },
-        { "title": "BFDI 18: Reveal Novum", "path": "season 1/BFDI 18_ Reveal Novum.mp4", "subtitle": "season 1/captions/[English] BFDI 18_ Reveal Novum [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep18.jpg" },
-        { "title": "BFDI 19: Rescission", "path": "season 1/BFDI 19_ Rescission.mp4", "subtitle": "season 1/captions/[English] BFDI 19_ Rescission [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep19.jpg" },
-        { "title": "BFDI 20: Gardening Hero", "path": "season 1/BFDI 20_ Gardening Hero.mp4", "subtitle": "season 1/captions/[English] BFDI 20_ Gardening Hero [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep20.jpg" },
-        { "title": "BFDI 21: The Glistening", "path": "season 1/BFDI 21_ The Glistening.mp4", "subtitle": "season 1/captions/[English] BFDI 21_ The Glistening [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep21.jpg" },
-        { "title": "BFDI 22: Don't Pierce My Flesh", "path": "season 1/BFDI 22_ Don't Pierce My Flesh.mp4", "subtitle": "season 1/captions/[English] BFDI 22_ Don't Pierce My Flesh [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep22.jpg" },
-        { "title": "BFDI 23: Hurtful!", "path": "season 1/BFDI 23_ Hurtful!.mp4", "subtitle": "season 1/captions/[English] BFDI 23_ Hurtful! [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep23.jpg" },
-        { "title": "BFDI 24: Insectophobe's Nightmare 2", "path": "season 1/BFDI 24_ Insectophobe's Nightmare 2.mp4", "subtitle": "season 1/captions/[English] BFDI 24_ Insectophobe's Nightmare 2 [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep24.jpg" },
-        { "title": "BFDI 25: Return of the Hang Glider", "path": "season 1/BFDI 25_ Return of the Hang Glider.mp4", "subtitle": "season 1/captions/[English] BFDI 25_ Return of the Hang Glider [DownSub.com].srt", "thumbnail": "season 1/thumnails/Ep25.jpg" }
-      ]
+        ]
     },
 
     {
-      "title": "Season 2a",
-      "logo": "BFDIA.jpg",
+      "title": "",
+      "logo": "",
       "episodes": [
-        { "title": "BFDIA 1: Yeah, Who? I Wanna Know", "path": "season 2a/BFDIA 1_ Yeah, Who_ I Wanna Know.mp4", "subtitle": "season 2a/[English] BFDIA 1_ Yeah, Who_ I Wanna Know [DownSub.com].srt", "thumbnail": "season 2a/Again1.jpg" },
-        { "title": "BFDIA 2: Get Digging", "path": "season 2a/BFDIA 2_ Get Digging.mp4", "subtitle": "season 2a/[English] BFDIA 2_ Get Digging [DownSub.com].srt", "thumbnail": "season 2a/Again2.jpg" },
-        { "title": "BFDIA 3: Insectophobe's Nightmare 3", "path": "season 2a/BFDIA 3_ Insectophobe's Nightmare 3.mp4", "subtitle": "season 2a/[English] BFDIA 3_ Insectophobe's Nightmare 3 [DownSub.com].srt", "thumbnail": "season 2a/Again3.jpg" },
-        { "title": "BFDIA 4: Zeeky Boogy Doog", "path": "season 2a/BFDIA 4_ Zeeky Boogy Doog.mp4", "subtitle": "season 2a/[English] BFDIA 4_ Zeeky Boogy Doog [DownSub.com].srt", "thumbnail": "season 2a/Again4.jpg" },
-
-        { "title": "BFDIA 5a: Get in the Van", "path": "season 2a/BFDIA 5a_ Get in the Van.mp4", "subtitle": "season 2a/[English] BFDIA 5a_ Get in the Van [DownSub.com].srt", "thumbnail": "season 2a/Again5a.jpg" },
+        { "title": "", "path": "", "subtitle": "", "thumbnail": "" },
         {
-          "title": "BFDIA 5b",
-          "path": "season 2a/BFDIA 5b.exe",
+          "title": "",
+          "path": "",
           "external_exe": true,
-          "thumbnail": "season 2a/Again5b.jpg"
-        },
-        { "title": "BFDIA 5c: No More Snow!", "path": "season 2a/BFDIA 5c_ No More Snow!.mp4", "subtitle": "season 2a/[English] BFDIA 5c_ No More Snow! [DownSub.com].srt", "thumbnail": "season 2a/Again5c.jpg" },
-        { "title": "BFDIA 5d: It's a Monster", "path": "season 2a/BFDIA 5d_ It's a Monster.mp4", "subtitle": "season 2a/[English] BFDIA 5d_ It's a Monster [DownSub.com].srt", "thumbnail": "season 2a/Again5d.jpg" },
-        { "title": "BFDIA 5e: The Long-lost Yoyle City", "path": "season 2a/BFDIA 5e_ The Long-lost Yoyle City.mp4", "subtitle": "season 2a/[English] BFDIA 5e_ The Long-lost Yoyle City [DownSub.com].srt", "thumbnail": "season 2a/Again5e.jpg" }
-      ]
-    },
-
-    {
-      "title": "Season 2b",
-      "logo": "BFN.jpg",
-      "episodes": [
-        { "title": "BFDIA 6: Well Rested",  "path": "season 2b/BFDIA 6_ Well Rested.mp4",  "subtitle": "season 2b/[English] BFDIA 6_ Well Rested [DownSub.com].srt",  "thumbnail": "season 2b/Again6.jpg" },
-        { "title": "BFDIA 7: Intruder Alert",  "path": "season 2b/BFDIA 7_ Intruder Alert.mp4",  "subtitle": "season 2b/[English] BFDIA 7_ Intruder Alert [DownSub.com].srt",  "thumbnail": "season 2b/Again7.jpg" },
-        { "title": "BFDIA 8: Meaty",  "path": "season 2b/BFDIA 8_ Meaty.mp4",  "subtitle": "season 2b/[English] BFDIA 8_ Meaty [DownSub.com].srt",  "thumbnail": "season 2b/Again8.jpg" },
-        { "title": "BFDIA 9: Catch These Hands",  "path": "season 2b/BFDIA 9_ Catch These Hands.mp4",  "subtitle": "season 2b/[English] BFDIA 9_ Catch These Hands [DownSub.com].srt",  "thumbnail": "season 2b/Again9.jpg" },
-        { "title": "BFDIA 10: Taste the Sweetness", "path": "season 2b/BFDIA 10_ Taste the Sweetness.mp4", "subtitle": "season 2b/[English] BFDIA 10_ Taste the Sweetness [DownSub.com].srt", "thumbnail": "season 2b/Again10.jpg" },
-        { "title": "BFDIA 11: Lots of Mud", "path": "season 2b/BFDIA 11_ Lots of Mud.mp4", "subtitle": "season 2b/[English] BFDIA 11_ Lots of Mud [DownSub.com].srt", "thumbnail": "season 2b/Again11.jpg" },
-        { "title": "BFDIA 12: Insectophobe's Nightmare 4", "path": "season 2b/BFDIA 12_ Insectophobe's Nightmare 4.mp4", "subtitle": "season 2b/[English] BFDIA 12_ Insectophobe's Nightmare 4 (ft. Kevin MacLeod) [DownSub.com].srt", "thumbnail": "season 2b/Again12.jpg" },
-        { "title": "BFDIA 13: Well, Look Who It Is!", "path": "season 2b/BFDIA 13_ Well, Look Who It Is!.mp4", "subtitle": "season 2b/[English] BFDIA 13_ Well, Look Who It Is! [DownSub.com].srt", "thumbnail": "season 2b/Again13.jpg" },
-        { "title": "BFDIA 14: PointyPointyPointy ♫", "path": "season 2b/BFDIA 14_ PointyPointyPointy ♫.mp4", "subtitle": "season 2b/[English] BFDIA 14_ PointyPointyPointy ♫ [DownSub.com].srt", "thumbnail": "season 2b/Again14.jpg" },
-        { "title": "BFDIA 15: Spore Day", "path": "season 2b/BFDIA 15_ Spore Day.mp4", "subtitle": "season 2b/[English] BFDIA 15_ Spore Day [DownSub.com].srt", "thumbnail": "season 2b/Again15.jpg" },
-        { "title": "BFDIA 16: Respect to the Wicked", "path": "season 2b/BFDIA 16_ Respect to the Wicked.mp4", "subtitle": "season 2b/[English] BFDIA 16_ Respect to the Wicked [DownSub.com].srt", "thumbnail": "season 2b/Again16.jpg" },
-        { "title": "BFDIA 17: Start the Shift", "path": "season 2b/BFDIA 17_ Start the Shift.mp4", "subtitle": "season 2b/[English] BFDIA 17_ Start the Shift (ft. Homestar Runner, The Duck Song, Clay O’Donnell, JelloApocalypse) [DownSub.com].srt", "thumbnail": "season 2b/Again17.jpg" },
-        { "title": "BFDIA 18: Airplanes in the Night Sky", "path": "season 2b/BFDIA 18_ Airplanes in the Night Sky.mp4", "subtitle": "season 2b/[English] BFDIA 18_ Airplanes in the Night Sky [DownSub.com].srt", "thumbnail": "season 2b/Again18.jpg" },
-        { "title": "BFDIA 19: 🥚", "path": "season 2b/BFDIA 19_ 🥚.mp4", "subtitle": "season 2b/[English] BFDIA 19_ 🥚 [DownSub.com].srt", "thumbnail": "season 2b/Again19.jpg" },
-        { "title": "BFDIA 20: Launch Party", "path": "season 2b/BFDIA 20_ Launch Party.mp4", "subtitle": "season 2b/[English] BFDIA 20_ Launch Party [DownSub.com].srt", "thumbnail": "season 2b/Again20.jpg" },
-        { "title": "BFDIA 21: We're Not Friends", "path": "season 2b/BFDIA 21_ We're Not Friends.mp4", "subtitle": "season 2b/[English] BFDIA 21_ We're Not Friends [DownSub.com].srt", "thumbnail": "season 2b/Again21.jpg" },
-        { "title": "BFDIA 22: I'm the Main Character", "path": "season 2b/BFDIA 22_ I'm the Main Character.mp4", "subtitle": "season 2b/[English] BFDIA 22_ I'm the Main Character [DownSub.com].srt", "thumbnail": "season 2b/Again22.jpg" }
-      ]
-    },
-
-    {
-      "title": "Season 3",
-      "logo": "IDFB.jpg",
-      "episodes": [
-        { "title": "IDFB 1: Welcome Back", "path": "season 3/IDFB 1_ Welcome Back.mp4", "subtitle": "season 3/[English] IDFB 1_ Welcome Back [DownSub.com].srt", "thumbnail": "season 3/Idfb1.jpg" }
-      ]
-    },
-
-    {
-      "title": "Season 4a",
-      "logo": "Battle_for_Dream_Island_S4.jpg",
-      "episodes": [
-        { "title": "BFB 1: Getting Teardrop to Talk",  "path": "season 4a/BFB 1_ Getting Teardrop to Talk.mp4",  "subtitle": "season 4a/[English] BFB 1_ Getting Teardrop to Talk [DownSub.com].srt",  "thumbnail": "season 4a/BFB_1.jpg" },
-        { "title": "BFB 2: Lick Your Way to Freedom",  "path": "season 4a/BFB 2_ Lick Your Way to Freedom.mp4",  "subtitle": "season 4a/[English] BFB 2_ Lick Your Way to Freedom [DownSub.com].srt",  "thumbnail": "season 4a/BFB_2.jpg" },
-        { "title": "BFB 3: Why Would You Do This on a Swingset",  "path": "season 4a/BFB 3_ Why Would You Do This on a Swingset.mp4",  "subtitle": "season 4a/[English] BFB 3_ Why Would You Do This on a Swingset [DownSub.com].srt",  "thumbnail": "season 4a/BFB_3.jpg" },
-        { "title": "BFB 4: Today's Very Special Episode",  "path": "season 4a/BFB 4_ Today's Very Special Episode.mp4",  "subtitle": "season 4a/[English] BFB 4_ Today's Very Special Episode [DownSub.com].srt",  "thumbnail": "season 4a/BFB_4.jpg" },
-        { "title": "BFB 5: Fortunate Ben",  "path": "season 4a/BFB 5_ Fortunate Ben.mp4",  "subtitle": "season 4a/[English] BFB 5_ Fortunate Ben [DownSub.com].srt",  "thumbnail": "season 4a/BFB_5.jpg" },
-        { "title": "BFB 6: Four Goes Too Far",  "path": "season 4a/BFB 6_ Four Goes Too Far.mp4",  "subtitle": "season 4a/[English] BFB 6_ Four Goes Too Far [DownSub.com].srt",  "thumbnail": "season 4a/BFB_6.jpg" },
-        { "title": "BFB 7: The Liar Ball You Don't Want",  "path": "season 4a/BFB 7_ The Liar Ball You Don't Want.mp4",  "subtitle": "season 4a/[English] BFB 7_ The Liar Ball You Don't Want [DownSub.com].srt",  "thumbnail": "season 4a/BFB_7.jpg" },
-        { "title": "BFB 8: Questions Answered",  "path": "season 4a/BFB 8_ Questions Answered.mp4",  "subtitle": "season 4a/[English] BFB 8_ Questions Answered [DownSub.com].srt",  "thumbnail": "season 4a/BFB_8.jpg" },
-        { "title": "BFB 9: This Episode Is About Basketball",  "path": "season 4a/BFB 9_ This Episode Is About Basketball.mp4",  "subtitle": "season 4a/[English] BFB 9_ This Episode Is About Basketball [DownSub.com].srt",  "thumbnail": "season 4a/BFB_9.jpg" },
-        { "title": "BFB 10: Enter the Exit", "path": "season 4a/BFB 10_ Enter the Exit.mp4", "subtitle": "season 4a/[English] BFB 10_ Enter the Exit [DownSub.com].srt", "thumbnail": "season 4a/BFB_10.jpg" },
-        { "title": "BFB 11: Get to the Top in 500 Steps", "path": "season 4a/BFB 11_ Get to the Top in 500 Steps.mp4", "subtitle": "season 4a/[English] BFB 11_ Get to the Top in 500 Steps [DownSub.com].srt", "thumbnail": "season 4a/BFB_11.jpg" },
-        { "title": "BFB 12: What Do You Think of Roleplay?", "path": "season 4a/BFB 12_ What Do You Think of Roleplay_.mp4", "subtitle": "season 4a/[English] BFB 12_ What Do You Think of Roleplay_ [DownSub.com].srt", "thumbnail": "season 4a/BFB_12.jpg" },
-        { "title": "BFB 13: Return of the Rocket Ship", "path": "season 4a/BFB 13_ Return of the Rocket Ship.mp4", "subtitle": "season 4a/[English] BFB 13_ Return of the Rocket Ship [DownSub.com].srt", "thumbnail": "season 4a/BFB_13.jpg" },
-        { "title": "BFB 14: Don't Dig Straight Down", "path": "season 4a/BFB 14_ Don't Dig Straight Down.mp4", "subtitle": "season 4a/[English] BFB 14_ Don't Dig Straight Down [DownSub.com].srt", "thumbnail": "season 4a/BFB_14.jpg" },
-        { "title": "BFB 15: The Four is Lava", "path": "season 4a/BFB 15_ The Four is Lava.mp4", "subtitle": "season 4a/[English] BFB 15_ The Four is Lava [DownSub.com].srt", "thumbnail": "season 4a/BFB_15.jpg" },
-        { "title": "BFB 16: The Escape from Four", "path": "season 4a/BFB 16_ The Escape from Four.mp4", "subtitle": "season 4a/[English] BFB 16_ The Escape from Four [DownSub.com].srt", "thumbnail": "season 4a/BFB_16.jpg" }
-      ]
-    },
-
-    {
-      "title": "Season 4b",
-      "logo": "Battle_for_BFB_BFB_16_trailer.jpg",
-      "episodes": [
-        { "title": "BFB 17: X Marks the Spot", "path": "season 4b/BFB 17_ X Marks the Spot.mp4", "subtitle": "season 4b/[English] BFB 17_ X Marks the Spot [DownSub.com].srt", "thumbnail": "season 4b/BFB_17.jpg" },
-        { "title": "BFB 18: Take the Tower", "path": "season 4b/BFB 18_ Take the Tower.mp4", "subtitle": "season 4b/[English] BFB 18_ Take the Tower [DownSub.com].srt", "thumbnail": "season 4b/BFB_18.jpg" },
-        { "title": "BFB 19: How Loe Can You Grow_", "path": "season 4b/BFB 19_ How Loe Can You Grow_.mp4", "subtitle": "season 4b/[English] BFB 19_ How Loe Can You Grow_ [DownSub.com].srt", "thumbnail": "season 4b/BFB_19.jpg" },
-        { "title": "BFB 20: A Taste of Space", "path": "season 4b/BFB 20_ A Taste of Space.mp4", "subtitle": "season 4b/[English] BFB 20_ A Taste of Space [DownSub.com].srt", "thumbnail": "season 4b/BFB_20.jpg" },
-        { "title": "BFB 21: Let's Raid The Warehouse", "path": "season 4b/BFB 21_ Let's Raid The Warehouse.mp4", "subtitle": "season 4b/[English] BFB 21_ Let's Raid The Warehouse [DownSub.com].srt", "thumbnail": "season 4b/BFB_21.jpg" },
-        { "title": "BFB 22: Who Stole Donut's Diary_", "path": "season 4b/BFB 22_ Who Stole Donut's Diary_.mp4", "subtitle": "season 4b/[English] BFB 22_ Who Stole Donut's Diary_ [DownSub.com].srt", "thumbnail": "season 4b/BFB_22.jpg" },
-        { "title": "BFB 23: Fashion For Your Face!", "path": "season 4b/BFB 23_ Fashion For Your Face!.mp4", "subtitle": "season 4b/[English] BFB 23_ Fashion For Your Face! [DownSub.com].srt", "thumbnail": "season 4b/BFB_23.jpg" },
-        { "title": "BFB 24: The Game Has Changed", "path": "season 4b/BFB 24_ The Game Has Changed.mp4", "subtitle": "season 4b/[English] BFB 24_ The Game Has Changed [DownSub.com].srt", "thumbnail": "season 4b/BFB_24.jpg" },
-        { "title": "BFB 25: The Tweested Temple", "path": "season 4b/BFB 25_ The Tweested Temple.mp4", "subtitle": "season 4b/[English] BFB 25_ The Tweested Temple [DownSub.com].srt", "thumbnail": "season 4b/BFB_25.jpg" },
-        { "title": "BFB 26: The Hidden Contestant", "path": "season 4b/BFB 26_ The Hidden Contestant.mp4", "subtitle": "season 4b/[English] BFB 26_ The Hidden Contestant [DownSub.com].srt", "thumbnail": "season 4b/BFB_26.jpg" },
-        { "title": "BFB 27: Uprooting Everything", "path": "season 4b/BFB 27_ Uprooting Everything.mp4", "subtitle": "season 4b/[English] BFB 27_ Uprooting Everything [DownSub.com].srt", "thumbnail": "season 4b/BFB_27.jpg" },
-        { "title": "BFB 28: B.F.B. Back From Beginning", "path": "season 4b/BFB 28_ B.F.B. Back From Beginning.mp4", "subtitle": "season 4b/[English] BFB 28_ B.F.B. Back From Beginning [DownSub.com].srt", "thumbnail": "season 4b/BFB_28.jpg" },
-        { "title": "BFB 29: SOS (Save Our Show)", "path": "season 4b/BFB 29_ SOS (Save Our Show).mp4", "subtitle": "season 4b/[English] BFB 29_ SOS (Save Our Show) [DownSub.com].srt", "thumbnail": "season 4b/BFB_29.jpg" },
-        { "title": "BFB 30: Chapter Complete", "path": "season 4b/BFB 30_ Chapter Complete.mp4", "subtitle": "season 4b/[English] BFB 30_ Chapter Complete [DownSub.com].srt", "thumbnail": "season 4b/BFB_30.jpg" }
-      ]
-    },
-
-    {
-      "title": "Season 5",
-      "logo": "TPOT_print.jpg",
-      "episodes": [
-        { "title": "BFDI:TPOT 1: You Know Those Buttons Don't Do Anything, Right?",  "path": "season 5/BFDI_TPOT 1_ You Know Those Buttons Don't Do Anything, Right_.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 1_ You Know Those Buttons Don't Do Anything, Right_ [DownSub.com].srt",  "thumbnail": "season 5/TPOT1.jpg" },
-        { "title": "BFDI:TPOT 2: The Worst Day of Black Hole's Life",  "path": "season 5/BFDI_TPOT 2_ The Worst Day of Black Hole's Life.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 2_ The Worst Day of Black Hole's Life [DownSub.com].srt",  "thumbnail": "season 5/TPOT2.jpg" },
-        { "title": "BFDI:TPOT 3: Getting Puffball To Think About Rollercoasters",  "path": "season 5/BFDI_TPOT 3_ Getting Puffball To Think About Rollercoasters.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 3_ Getting Puffball To Think About Rollercoasters [DownSub.com].srt",  "thumbnail": "season 5/TPOT3.jpg" },
-        { "title": "BFDI:TPOT 4: Gardening Zero",  "path": "season 5/BFDI_TPOT 4_ Gardening Zero.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 4_ Gardening Zero [DownSub.com].srt",  "thumbnail": "season 5/TPOT4.jpg" },
-        { "title": "BFDI:TPOT 5: Fishes and Dishes",  "path": "season 5/BFDI_TPOT 5_ Fishes and Dishes.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 5_ Fishes and Dishes [DownSub.com].srt",  "thumbnail": "season 5/TPOT5.jpg" },
-        { "title": "BFDI:TPOT 6: The Great Goikian Bake-Off",  "path": "season 5/BFDI_TPOT 6_ The Great Goikian Bake-Off.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 6_ The Great Goikian Bake-Off [DownSub.com].srt",  "thumbnail": "season 5/TPOT6.jpg" },
-        { "title": "BFDI:TPOT 7: The Seven Wonders of Goiky",  "path": "season 5/BFDI_TPOT 7_ The Seven Wonders of Goiky.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 7_ The Seven Wonders of Goiky [DownSub.com].srt",  "thumbnail": "season 5/TPOT7.jpg" },
-        { "title": "BFDI:TPOT 8: Balancing P.A.C.T.",  "path": "season 5/BFDI_TPOT 8_ Balancing P.A.C.T..mp4",  "subtitle": "season 5/[English] BFDI_TPOT 8_ Balancing P.A.C.T. [DownSub.com].srt",  "thumbnail": "season 5/TPOT8.jpg" },
-        { "title": "BFDI:TPOT 9: Outbreak At Stake",  "path": "season 5/BFDI_TPOT 9_ Outbreak At Stake.mp4",  "subtitle": "season 5/[English] BFDI_TPOT 9_ Outbreak At Stake [DownSub.com].srt",  "thumbnail": "season 5/TPOT9.jpg" },
-        { "title": "BFDI:TPOT 10: Oneirophobe's Nightmare", "path": "season 5/BFDI_TPOT 10_ Oneirophobe's Nightmare.mp4", "subtitle": "season 5/[English] BFDI_TPOT 10_ Oneirophobe's Nightmare [DownSub.com].srt", "thumbnail": "season 5/TPOT10.jpg" },
-        { "title": "BFDI:TPOT 11: Out Of The Blue", "path": "season 5/BFDI_TPOT 11_ Out Of The Blue.mp4", "subtitle": "season 5/[English] BFDI_TPOT 11_ Out Of The Blue [DownSub.com].srt", "thumbnail": "season 5/TPOT11.jpg" },
-        { "title": "BFDI:TPOT 12: What's Up Bell's String?", "path": "season 5/BFDI_TPOT 12_ What's Up Bell's String?.mp4", "subtitle": "season 5/[English] BFDI_TPOT 12_ What's Up Bell's String? [DownSub.com].srt", "thumbnail": "season 5/TPOT12.jpg" },
-        { "title": "BFDI:TPOT 13: Category One", "path": "season 5/BFDI_TPOT 13_ Category One.mp4", "subtitle": "season 5/[English] BFDI_TPOT 13_ Category One [DownSub.com].srt", "thumbnail": "season 5/TPOT13.jpg" },
-        { "title": "BFDI:TPOT 14: I SAID CAREFUL!!!", "path": "season 5/BFDI_TPOT 14_ I SAID CAREFUL!!!.mp4", "subtitle": "season 5/[English] BFDI_TPOT 14_ I SAID CAREFUL!!! [DownSub.com].srt", "thumbnail": "season 5/TPOT14.jpg" },
-        { "title": "BFDI:TPOT 15: Seasonal Shift", "path": "season 5/BFDI_TPOT 15_ Seasonal Shift.mp4", "subtitle": "season 5/[English] BFDI_TPOT 15_ Seasonal Shift (ft. Gooseworx, jacksfilms, Schmoyoho) [DownSub.com].srt", "thumbnail": "season 5/TPOT15.jpg" },
-        { "title": "BFDI:TPOT 16: The Power of Four", "path": "season 5/BFDI_TPOT 16_ The Power of Four.mp4", "subtitle": "season 5/[English] BFDI_TPOT 16_ The Power of Four [DownSub.com].srt", "thumbnail": "season 5/TPOT16.jpg" },
-        { "title": "BFDI:TPOT 17: Bottle For Dream Island", "path": "season 5/BFDI_TPOT 17_ Bottle For Dream Island.mp4", "subtitle": "season 5/[English] BFDI_TPOT 17_ Bottle For Dream Island [DownSub.com].srt", "thumbnail": "season 5/TPOT17.jpg" },
-        { "title": "BFDI:TPOT 18: BFB 31", "path": "season 5/BFDI_TPOT 18_ BFB 31.mp4", "subtitle": "season 5/[English] BFDI_TPOT 18_ BFB 31 [DownSub.com].srt", "thumbnail": "season 5/TPOT18.jpg" },
-        { "title": "BFDI:TPOT 19: Last One Standing", "path": "season 5/BFDI_TPOT 19_ Last One Standing.mp4", "subtitle": "season 5/[English] BFDI_TPOT 19_ Last One Standing [DownSub.com].srt", "thumbnail": "season 5/TPOT19.jpg" },
-        { "title": "BFDI:TPOT 20: Alone", "path": "season 5/BFDI_TPOT 20_ Alone.mp4", "subtitle": "season 5/[English] BFDI_TPOT 20_ Alone [DownSub.com].srt", "thumbnail": "season 5/TPOT20.jpg" }
+          "thumbnail": ""
+        }      
       ]
     }
   ]
 }
+
