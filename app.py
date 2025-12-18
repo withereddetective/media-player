@@ -4,19 +4,19 @@ import sys
 import subprocess
 
 from collections import OrderedDict
-from PySide6.QtCore import Qt, QSize, QTimer, QProcess
+from PySide6.QtCore import Qt, QSize, QTimer, QProcess, QEvent
 from PySide6.QtGui import QAction, QIcon, QPixmap, QImageReader
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QListWidgetItem, QListView,
     QHBoxLayout, QVBoxLayout, QPushButton, QLabel,
-    QSplitter, QMessageBox, QStyle, QSlider, QStatusBar, QWidget
+    QSplitter, QMessageBox, QStyle, QSlider, QStatusBar, QWidget, QSizePolicy
 )
 
 import vlc
 
 
+
 def resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller bundle."""
     if hasattr(sys, '_MEIPASS'):
         # Running from a PyInstaller bundle
         return os.path.join(sys._MEIPASS, relative_path)
@@ -27,12 +27,15 @@ def resource_path(relative_path):
 
 class Episode:
     def __init__(self, title, path, is_external_exe=False,
-                 subtitle_path=None, thumbnail_path=None):
+                 subtitle_path=None, thumbnail_path=None, images=None, base_dir=None):
         self.title = title
         self.path = path
         self.is_external_exe = is_external_exe
         self.subtitle_path = subtitle_path
         self.thumbnail_path = thumbnail_path
+        self.images = images or []
+        self.base_dir = base_dir or os.getcwd()
+        self.length_str = None
 
     def resolved_path(self):
         return resource_path(self.path)
@@ -117,6 +120,48 @@ class Episode:
             pass
         return p
 
+    def is_audio(self):
+        if not self.path:
+            return False
+        ext = os.path.splitext(self.path)[1].lower()
+        return ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.wma', '.opus', '.m4b', '.aiff', '.au', '.webm']
+
+    def is_image(self):
+        return bool(self.images)
+
+    def resolved_images(self):
+        return [os.path.join(self.base_dir, img) for img in self.images]
+
+    def get_length_str(self):
+        if self.length_str is not None:
+            return self.length_str
+        if self.is_image():
+            self.length_str = f"{len(self.images)} images"
+            return self.length_str
+        if self.path and os.path.exists(self.resolved_path()):
+            try:
+                instance = vlc.Instance('--no-video', '--no-audio')  # Minimal instance for metadata only
+                media = instance.media_new(self.resolved_path())
+                media.parse_with_options(vlc.MediaParseFlag.local, 5000)  # Timeout 5s
+                duration = media.get_duration()
+                if duration > 0:
+                    s = int(duration // 1000)
+                    h = s // 3600
+                    m = (s % 3600) // 60
+                    sec = s % 60
+                    if h:
+                        self.length_str = f"{h}:{m:02d}:{sec:02d}"
+                    else:
+                        self.length_str = f"{m:02d}:{sec:02d}"
+                else:
+                    self.length_str = "Unknown"
+            except Exception as e:
+                print(f"Error getting duration for {self.path}: {e}")
+                self.length_str = "Unknown"
+        else:
+            self.length_str = ""
+        return self.length_str
+
 
 class Season:
     def __init__(self, title, episodes, logo_path=None):
@@ -159,10 +204,12 @@ class DvdStylePlayer(QMainWindow):
         # Right panel: video surface + preview + controls
         self.video_surface = QWidget()
         self.video_surface.setStyleSheet("background-color: black;")
+        self.video_surface.installEventFilter(self)
 
         self.preview_label = QLabel("Episode Preview")
         self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setFixedHeight(150)
+        self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.preview_label.setMinimumHeight(150)
 
         controls = self._build_controls()
 
@@ -198,6 +245,10 @@ class DvdStylePlayer(QMainWindow):
         # Pixmap cache (LRU)
         self._pixmap_cache = OrderedDict()
         self._pixmap_cache_max = 200
+        # Track if video was playing during slider drag
+        self.was_playing_during_drag = False
+        # Current image index for image episodes
+        self.current_image_index = 0
 
         # UI sync timer
         self.ui_timer = QTimer(self)
@@ -223,27 +274,29 @@ class DvdStylePlayer(QMainWindow):
         self.episode_list.itemDoubleClicked.connect(self._on_episode_double_clicked)
 
     def _build_controls(self):
-        play_btn = QPushButton()
-        play_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        play_btn.clicked.connect(self._play_selected)
+        self.play_btn = QPushButton()
+        self.play_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.play_btn.clicked.connect(self._play_selected)
 
-        pause_btn = QPushButton()
-        pause_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-        pause_btn.clicked.connect(self._pause)
+        self.pause_btn = QPushButton()
+        self.pause_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.pause_btn.clicked.connect(self._pause)
 
-        stop_btn = QPushButton()
-        stop_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
-        stop_btn.clicked.connect(self._stop)
+        self.stop_btn = QPushButton()
+        self.stop_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stop_btn.clicked.connect(self._stop)
 
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 1000)
         # Make the runtime slider larger (stretch) and update during moves
         self.position_slider.sliderMoved.connect(self._on_slider_moved)
+        self.position_slider.sliderPressed.connect(self._on_slider_pressed)
+        self.position_slider.sliderReleased.connect(self._on_slider_released)
 
         # Time label showing current / total
         self.position_label = QLabel("00:00 / 00:00")
 
-        vol_label = QLabel("Vol")
+        self.vol_label = QLabel("Vol")
         self.volume_slider = QSlider(Qt.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(80)
@@ -259,16 +312,29 @@ class DvdStylePlayer(QMainWindow):
         # Connect button to toggle subtitles; use a small wrapper to pass the checked state
         self.subtitle_button.toggled.connect(lambda checked: self._toggle_subtitles(checked))
 
+        # Image navigation buttons
+        self.back_btn = QPushButton("<")
+        self.back_btn.setFixedWidth(40)
+        self.back_btn.clicked.connect(self._prev_image)
+        self.back_btn.setVisible(False)
+
+        self.next_btn = QPushButton(">")
+        self.next_btn.setFixedWidth(40)
+        self.next_btn.clicked.connect(self._next_image)
+        self.next_btn.setVisible(False)
+
         controls = QHBoxLayout()
-        controls.addWidget(play_btn)
-        controls.addWidget(pause_btn)
-        controls.addWidget(stop_btn)
+        controls.addWidget(self.back_btn)
+        controls.addWidget(self.play_btn)
+        controls.addWidget(self.pause_btn)
+        controls.addWidget(self.stop_btn)
         # Give runtime slider stretch so it becomes larger than the volume control
         controls.addWidget(self.position_slider, 1)
         controls.addWidget(self.position_label)
-        controls.addWidget(vol_label)
+        controls.addWidget(self.vol_label)
         controls.addWidget(self.volume_slider)
         controls.addWidget(self.subtitle_button)
+        controls.addWidget(self.next_btn)
         return controls
 
     def _format_ms(self, ms: int) -> str:
@@ -318,7 +384,8 @@ class DvdStylePlayer(QMainWindow):
             except Exception:
                 pass
             return pm
-        except Exception:
+        except Exception as e:
+            print(f"Error loading pixmap for {path}: {e}")
             # Fallback: let QPixmap try, then scale down
             try:
                 pm = QPixmap(path)
@@ -330,7 +397,8 @@ class DvdStylePlayer(QMainWindow):
                 except Exception:
                     pass
                 return scaled
-            except Exception:
+            except Exception as e2:
+                print(f"Fallback pixmap load failed for {path}: {e2}")
                 return QPixmap()
 
     def _build_menu(self):
@@ -366,8 +434,18 @@ class DvdStylePlayer(QMainWindow):
     def _populate_seasons(self):
         self.season_list.clear()
         for season in self.seasons:
-            # Put a blank line above the season title so text appears separated from icon
-            item = QListWidgetItem("\n" + season.title)
+            episodes_count = sum(1 for ep in season.episodes if not ep.is_audio())
+            tracks_count = sum(1 for ep in season.episodes if ep.is_audio())
+            parts = []
+            if episodes_count:
+                parts.append(f"{episodes_count} episodes")
+            if tracks_count:
+                parts.append(f"{tracks_count} tracks")
+            count_str = ", ".join(parts) if parts else ""
+            label = season.title
+            if count_str:
+                label += "\n" + count_str
+            item = QListWidgetItem(label)
             item.setData(Qt.UserRole, season)
             logo = season.resolved_logo()
             if logo and os.path.exists(logo):
@@ -376,7 +454,7 @@ class DvdStylePlayer(QMainWindow):
                     icon = QIcon(pixmap)
                     item.setIcon(icon)
             # Ensure items have enough vertical space for icon + blank line + title
-            item.setSizeHint(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 50))
+            item.setSizeHint(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 65))
             self.season_list.addItem(item)
         if self.season_list.count() > 0:
             self.season_list.setCurrentRow(0)
@@ -410,8 +488,11 @@ class DvdStylePlayer(QMainWindow):
             return
         season = current.data(Qt.UserRole)
         for ep in season.episodes:
-            # Show a blank line above the episode title for spacing under the icon
-            label = "\n" + ep.title + ("  [Game]" if ep.is_external_exe else "")
+            label = ep.title + ("  [Game]" if ep.is_external_exe else ("  [Images]" if ep.is_image() else ""))
+            if not ep.is_external_exe:
+                length = ep.get_length_str()
+                if length:
+                    label += "\n" + length
             item = QListWidgetItem(label)
             item.setData(Qt.UserRole, ep)
             thumb = ep.resolved_thumbnail()
@@ -420,7 +501,7 @@ class DvdStylePlayer(QMainWindow):
                 if not pixmap.isNull():
                     icon = QIcon(pixmap)
                     item.setIcon(icon)
-            item.setSizeHint(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 50))
+            item.setSizeHint(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 65))
             self.episode_list.addItem(item)
         if self.episode_list.count() > 0:
             self.episode_list.setCurrentRow(0)
@@ -432,7 +513,11 @@ class DvdStylePlayer(QMainWindow):
         thumb = ep.resolved_thumbnail()
         # Make sure preview is visible when selecting
         self.preview_label.setVisible(True)
-        if thumb and os.path.exists(thumb):
+        if ep.is_image() and ep.images:
+            # Show first image for image episodes
+            self._show_image(ep.resolved_images()[0])
+            self.current_image_index = 0
+        elif thumb and os.path.exists(thumb):
             pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
             if not pixmap.isNull():
                 self.preview_label.setPixmap(
@@ -442,6 +527,21 @@ class DvdStylePlayer(QMainWindow):
         # Fallback text when no preview image
         self.preview_label.setPixmap(QPixmap())
         self.preview_label.setText("Episode Preview")
+
+        # Update subtitle button state based on whether subtitles exist and not audio
+        sub_path = ep.resolved_subtitle()
+        has_subs = sub_path and os.path.exists(sub_path)
+        is_audio = ep.is_audio()
+        if is_audio or not has_subs:
+            self.subtitle_button.setEnabled(False)
+            self.subtitle_action.setEnabled(False)
+            self.subtitle_button.setChecked(False)
+            self.subtitle_action.setChecked(False)
+        else:
+            self.subtitle_button.setEnabled(True)
+            self.subtitle_action.setEnabled(True)
+            self.subtitle_button.setChecked(self.subtitle_enabled)
+            self.subtitle_action.setChecked(self.subtitle_enabled)
 
     def _on_episode_double_clicked(self, item):
         ep = item.data(Qt.UserRole)
@@ -530,11 +630,36 @@ class DvdStylePlayer(QMainWindow):
                     pass
                 QMessageBox.critical(self, "Launch failed", f"Failed to start game.\n{e}")
             return
-
+        elif ep.is_image():
+            # For image episodes, just set up the display
+            self.current_episode = ep
+            self.current_image_index = 0
+            self._show_image(ep.resolved_images()[self.current_image_index])
+            self.video_surface.setVisible(False)
+            self.preview_label.setVisible(True)
+            if len(ep.images) > 1:
+                self.back_btn.setVisible(True)
+                self.next_btn.setVisible(True)
+            else:
+                self.back_btn.setVisible(False)
+                self.next_btn.setVisible(False)
+            self.position_slider.setVisible(False)
+            self.position_label.setVisible(False)
+            self._set_panels_visible(False)
+            # Hide video controls for images
+            self.play_btn.setVisible(False)
+            self.pause_btn.setVisible(False)
+            self.subtitle_button.setVisible(False)
+            self.volume_slider.setVisible(False)
+            self.vol_label.setVisible(False)
+            self.status.showMessage(f"Viewing: {ep.title}", 3000)
+            return
+        # For audio and video, proceed with VLC
         media_path = ep.resolved_path()
         if not os.path.exists(media_path):
             QMessageBox.critical(self, "Missing file", f"Cannot find embedded video: {media_path}")
             return
+        # ... rest of the code
         # Rebind the video surface handle in case it changed (winId can change on Windows)
         try:
             win_id = int(self.video_surface.winId())
@@ -548,30 +673,50 @@ class DvdStylePlayer(QMainWindow):
             # Use absolute path and VLC option prefix ':' to ensure libvlc sees it
             try:
                 media.add_option(f":sub-file={os.path.abspath(sub_path)}")
-            except Exception:
-                # best-effort; continue without crashing
-                pass
+            except Exception as e:
+                print(f"Warning: Failed to add subtitle option: {e}")
 
         self.vlc_player.set_media(media)
         r = self.vlc_player.play()
         if r == -1:
-            QMessageBox.critical(self, "Playback error", "Failed to start playback.")
+            QMessageBox.critical(self, "Playback error", f"Failed to start playback for {ep.title}.")
             return
 
         self.current_episode = ep
-        # Hide the preview area while playback is active (user requested no thumbnail under video)
-        try:
-            self.preview_label.setPixmap(QPixmap())
-            self.preview_label.setVisible(False)
-        except Exception:
-            pass
+        # Handle audio vs video vs image display
+        if ep.is_audio():
+            # For audio, hide video surface and show thumbnail in preview
+            self.video_surface.setVisible(False)
+            thumb = ep.resolved_thumbnail()
+            if thumb and os.path.exists(thumb):
+                pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    self.preview_label.setPixmap(scaled_pixmap)
+            self.preview_label.setVisible(True)
+            # Ensure subtitles are disabled for audio
+            self.vlc_player.video_set_spu(-1)
+        else:
+            # Hide the preview area while playback is active (user requested no thumbnail under video)
+            try:
+                self.preview_label.setPixmap(QPixmap())
+                self.preview_label.setVisible(False)
+            except Exception:
+                pass
 
         # If subtitles should be enabled, try to enable the first subtitle track shortly after playback starts
         sub_path = ep.resolved_subtitle()
-        if self.subtitle_enabled and sub_path and os.path.exists(sub_path):
+        has_subs = sub_path and os.path.exists(sub_path)
+        if self.subtitle_enabled and has_subs:
             try:
                 # Schedule enabling subtitles after a short delay to let libVLC parse tracks
                 QTimer.singleShot(500, lambda: self.vlc_player.video_set_spu(0))
+            except Exception:
+                pass
+        else:
+            # Ensure subtitles are disabled if no subtitle file or not enabled
+            try:
+                self.vlc_player.video_set_spu(-1)
             except Exception:
                 pass
         # Hide selection panels when a new video starts
@@ -586,15 +731,34 @@ class DvdStylePlayer(QMainWindow):
     def _pause(self):
         self.vlc_player.pause()
 
+    def _toggle_play_pause(self):
+        try:
+            if self.vlc_player.is_playing():
+                self.vlc_player.pause()
+            else:
+                self.vlc_player.play()
+        except Exception:
+            pass
+
     def _stop(self):
         self.vlc_player.stop()
         self.ui_timer.stop()
         self.position_slider.setValue(0)
-        # Restore preview area when playback stops
+        # Restore UI: show video surface, reset preview, hide image buttons
         try:
-            self.preview_label.setVisible(True)
+            self.video_surface.setVisible(True)
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText("Episode Preview")
+            self.preview_label.setVisible(True)
+            self.back_btn.setVisible(False)
+            self.next_btn.setVisible(False)
+            self.position_slider.setVisible(True)
+            self.position_label.setVisible(True)
+            self.vol_label.setVisible(True)
+            self.play_btn.setVisible(True)
+            self.pause_btn.setVisible(True)
+            self.subtitle_button.setVisible(True)
+            self.volume_slider.setVisible(True)
         except Exception:
             pass
         # Deselect current episode and show panels
@@ -620,10 +784,108 @@ class DvdStylePlayer(QMainWindow):
         except Exception:
             pass
 
+    def _on_slider_pressed(self):
+        try:
+            self.was_playing_during_drag = bool(self.vlc_player.is_playing())
+            if self.was_playing_during_drag:
+                self.vlc_player.pause()
+        except Exception:
+            pass
+
+    def _on_slider_released(self):
+        try:
+            if self.was_playing_during_drag:
+                self.vlc_player.play()
+            self.was_playing_during_drag = False
+        except Exception:
+            pass
+
+    def eventFilter(self, obj, event):
+        if obj == self.video_surface and event.type() == QEvent.MouseButtonPress:
+            self._toggle_play_pause()
+            return True
+        return super().eventFilter(obj, event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Space:
+            self._toggle_play_pause()
+        elif event.key() == Qt.Key_Left:
+            self._seek_backward(10)
+        elif event.key() == Qt.Key_Right:
+            self._seek_forward(10)
+        elif event.key() == Qt.Key_Comma:
+            self._seek_backward_frame()
+        elif event.key() == Qt.Key_Period:
+            self._seek_forward_frame()
+        elif event.key() == Qt.Key_F:
+            self._toggle_fullscreen()
+        elif event.key() == Qt.Key_M:
+            self._toggle_mute()
+        else:
+            super().keyPressEvent(event)
+
     def _on_volume_changed(self, value: int):
         self.vlc_player.audio_set_volume(value)
 
+    def _seek_backward(self, seconds: int):
+        try:
+            current = self.vlc_player.get_time()
+            new_time = max(0, current - seconds * 1000)
+            self.vlc_player.set_time(new_time)
+        except Exception:
+            pass
+
+    def _seek_forward(self, seconds: int):
+        try:
+            current = self.vlc_player.get_time()
+            length = self.vlc_player.get_length()
+            new_time = min(length, current + seconds * 1000)
+            self.vlc_player.set_time(new_time)
+        except Exception:
+            pass
+
+    def _seek_backward_frame(self):
+        try:
+            self.vlc_player.previous_frame()
+        except Exception:
+            pass
+
+    def _seek_forward_frame(self):
+        try:
+            self.vlc_player.next_frame()
+        except Exception:
+            pass
+
+    def _toggle_mute(self):
+        try:
+            current_mute = self.vlc_player.audio_get_mute()
+            self.vlc_player.audio_set_mute(not current_mute)
+        except Exception:
+            pass
+
+    def _show_image(self, image_path):
+        if os.path.exists(image_path):
+            pixmap = self._load_scaled_pixmap(image_path, self.preview_label.width())
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.preview_label.setPixmap(scaled_pixmap)
+        else:
+            self.preview_label.setPixmap(QPixmap())
+            self.preview_label.setText("Image not found")
+
+    def _prev_image(self):
+        if self.current_episode and self.current_episode.is_image() and self.current_episode.images:
+            self.current_image_index = (self.current_image_index - 1) % len(self.current_episode.images)
+            self._show_image(self.current_episode.resolved_images()[self.current_image_index])
+
+    def _next_image(self):
+        if self.current_episode and self.current_episode.is_image() and self.current_episode.images:
+            self.current_image_index = (self.current_image_index + 1) % len(self.current_episode.images)
+            self._show_image(self.current_episode.resolved_images()[self.current_image_index])
+
     def _toggle_subtitles(self, checked: bool):
+        if not self.subtitle_button.isEnabled():
+            return
         self.subtitle_enabled = checked
         try:
             if checked:
@@ -723,7 +985,8 @@ class DvdStylePlayer(QMainWindow):
             pass
         self.status.showMessage(f"Subtitles {'enabled' if checked else 'disabled'}", 3000)
 
-    def _toggle_fullscreen(self, checked: bool):
+    def _toggle_fullscreen(self):
+        checked = not self.isFullScreen()
         # First try letting VLC toggle fullscreen for the video output
         try:
             self.vlc_player.set_fullscreen(checked)
@@ -737,23 +1000,31 @@ class DvdStylePlayer(QMainWindow):
                 self.showNormal()
         except Exception:
             pass
+        # Update menu action state
+        try:
+            self.fullscreen_action.setChecked(checked)
+        except Exception:
+            pass
 
     def _sync_ui(self):
-        length = self.vlc_player.get_length()
-        if length and length > 0:
-            if self.position_slider.maximum() != length:
-                self.position_slider.setRange(0, length)
+        try:
+            length = self.vlc_player.get_length()
+            if length and length > 0:
+                if self.position_slider.maximum() != length:
+                    self.position_slider.setRange(0, length)
 
-        pos = self.vlc_player.get_time()
-        if pos is not None and pos >= 0:
-            self.position_slider.blockSignals(True)
-            self.position_slider.setValue(pos)
-            self.position_slider.blockSignals(False)
-            # Update time label
-            try:
-                self.position_label.setText(f"{self._format_ms(pos)} / {self._format_ms(length)}")
-            except Exception:
-                pass
+            pos = self.vlc_player.get_time()
+            if pos is not None and pos >= 0:
+                self.position_slider.blockSignals(True)
+                self.position_slider.setValue(pos)
+                self.position_slider.blockSignals(False)
+                # Update time label
+                try:
+                    self.position_label.setText(f"{self._format_ms(pos)} / {self._format_ms(length)}")
+                except Exception as e:
+                    print(f"Error updating time label: {e}")
+        except Exception as e:
+            print(f"Error in _sync_ui: {e}")
 
     def _about(self):
         QMessageBox.information(
@@ -784,26 +1055,44 @@ class DvdStylePlayer(QMainWindow):
 
 
 def load_manifest(manifest_path: str):
+    try:
         with open(manifest_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+    except FileNotFoundError:
+        QMessageBox.critical(None, "Manifest missing", f"Cannot find manifest.json at {manifest_path}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        QMessageBox.critical(None, "Manifest error", f"Invalid JSON in manifest.json: {e}")
+        sys.exit(1)
+    except Exception as e:
+        QMessageBox.critical(None, "Manifest error", f"Error loading manifest: {e}")
+        sys.exit(1)
 
-        seasons = []
-        for season_entry in data.get("seasons", []):
-            title = season_entry.get("title", "Untitled Season")
-            logo = season_entry.get("logo")
-            episodes = []
-            for ep in season_entry.get("episodes", []):
-                episodes.append(
-                    Episode(
-                        title=ep.get("title", "Untitled Episode"),
-                        path=ep["path"],
-                        is_external_exe=ep.get("external_exe", False),
-                        subtitle_path=ep.get("subtitle"),
-                        thumbnail_path=ep.get("thumbnail"),
-                    )
+    base_dir = os.path.dirname(manifest_path) or os.getcwd()
+
+    seasons = []
+    for season_entry in data.get("seasons", []):
+        title = season_entry.get("title", "Untitled Season")
+        logo = season_entry.get("logo")
+        episodes = []
+        for ep in season_entry.get("episodes", []):
+            images = ep.get("images", [])
+            thumbnail_path = ep.get("thumbnail")
+            if not thumbnail_path and images:
+                thumbnail_path = images[0]
+            episodes.append(
+                Episode(
+                    title=ep.get("title", "Untitled Episode"),
+                    path=ep.get("path"),
+                    is_external_exe=ep.get("external_exe", False),
+                    subtitle_path=ep.get("subtitle"),
+                    thumbnail_path=thumbnail_path,
+                    images=images,
+                    base_dir=base_dir,
                 )
-            seasons.append(Season(title, episodes, logo_path=logo))
-        return seasons
+            )
+        seasons.append(Season(title, episodes, logo_path=logo))
+    return seasons
 
 
 def main():
