@@ -13,7 +13,7 @@
         {
           "title": "",
           "path": "",
-          "subtitle": "",
+          "subtitle": null,
           "thumbnail": ""
         }
         ]
@@ -29,9 +29,17 @@
           "path": "",
           "external_exe": true,
           "thumbnail": ""
-        }      
+        },
+        {
+          "title": "", "images": [
+            "",
+            "",
+            ""
+          ]
+        }
       ]
     }
   ]
 }
+
 
