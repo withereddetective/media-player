@@ -28,7 +28,12 @@
           "title": "",
           "path": "",
           "external_exe": true,
-          "thumbnail": ""
+          "thumbnail": "",
+          "images": [
+            "",
+            "",
+            ""
+          ]
         },
         {
           "title": "", "images": [
@@ -41,5 +46,6 @@
     }
   ]
 }
+
 
 
