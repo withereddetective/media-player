@@ -249,6 +249,8 @@ class DvdStylePlayer(QMainWindow):
         self.was_playing_during_drag = False
         # Current image index for image episodes
         self.current_image_index = 0
+        # Original splitter sizes for panel restoration
+        self._original_sizes = None
 
         # UI sync timer
         self.ui_timer = QTimer(self)
@@ -275,16 +277,23 @@ class DvdStylePlayer(QMainWindow):
 
     def _build_controls(self):
         self.play_btn = QPushButton()
+        self.play_btn.setText("Start")
         self.play_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.play_btn.clicked.connect(self._play_selected)
 
         self.pause_btn = QPushButton()
+        self.pause_btn.setText("Pause")
         self.pause_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-        self.pause_btn.clicked.connect(self._pause)
+        self.pause_btn.clicked.connect(self._toggle_play_pause)
 
         self.stop_btn = QPushButton()
         self.stop_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         self.stop_btn.clicked.connect(self._stop)
+
+        self.launch_btn = QPushButton("Launch")
+        self.launch_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.launch_btn.clicked.connect(self._launch_exe)
+        self.launch_btn.setVisible(False)
 
         self.position_slider = QSlider(Qt.Horizontal)
         self.position_slider.setRange(0, 1000)
@@ -328,6 +337,7 @@ class DvdStylePlayer(QMainWindow):
         controls.addWidget(self.play_btn)
         controls.addWidget(self.pause_btn)
         controls.addWidget(self.stop_btn)
+        controls.addWidget(self.launch_btn)
         # Give runtime slider stretch so it becomes larger than the volume control
         controls.addWidget(self.position_slider, 1)
         controls.addWidget(self.position_label)
@@ -466,7 +476,13 @@ class DvdStylePlayer(QMainWindow):
             # splitter stored as the first widget added to central widget layout earlier
             # We saved splitter locally; ensure attribute exists
             if hasattr(self, 'splitter'):
-                self.splitter.setVisible(visible)
+                if visible:
+                    self.splitter.setVisible(visible)
+                    self.splitter.update()
+                else:
+                    # Store current sizes before hiding
+                    self._original_sizes = self.splitter.sizes()
+                    self.splitter.setVisible(visible)
             # Keep the menu action in sync (checked = panels hidden)
             try:
                 if hasattr(self, 'panels_action'):
@@ -477,7 +493,12 @@ class DvdStylePlayer(QMainWindow):
                 # try to find splitter child
                 for w in self.centralWidget().children():
                     if isinstance(w, QSplitter):
-                        w.setVisible(visible)
+                        if visible:
+                            w.setVisible(visible)
+                            w.update()
+                        else:
+                            self._original_sizes = w.sizes()
+                            w.setVisible(visible)
                         break
         except Exception:
             pass
@@ -508,40 +529,112 @@ class DvdStylePlayer(QMainWindow):
 
     def _on_episode_selected(self, current, previous):
         if not current:
+            self.current_episode = None
             return
         ep = current.data(Qt.UserRole)
-        thumb = ep.resolved_thumbnail()
-        # Make sure preview is visible when selecting
-        self.preview_label.setVisible(True)
-        if ep.is_image() and ep.images:
-            # Show first image for image episodes
-            self._show_image(ep.resolved_images()[0])
+        self.current_episode = ep
+        # Set up preview UI based on episode type
+        if ep.is_external_exe:
+            # For exe episodes, set up display like image episodes
+            self.video_surface.setVisible(False)
+            self.preview_label.setVisible(True)
+            if ep.images:
+                self.current_image_index = 0
+                self._show_image(ep.resolved_images()[self.current_image_index])
+                self.back_btn.setVisible(len(ep.images) > 1)
+                self.next_btn.setVisible(len(ep.images) > 1)
+                try:
+                    self.back_btn.clicked.disconnect()
+                    self.next_btn.clicked.disconnect()
+                except:
+                    pass
+                self.back_btn.clicked.connect(self._prev_image)
+                self.next_btn.clicked.connect(self._next_image)
+            else:
+                thumb = ep.resolved_thumbnail()
+                if thumb and os.path.exists(thumb):
+                    pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
+                    if not pixmap.isNull():
+                        scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        self.preview_label.setPixmap(scaled_pixmap)
+                else:
+                    self.preview_label.setPixmap(QPixmap())
+                    self.preview_label.setText("Game Preview")
+                self.back_btn.setVisible(False)
+                self.next_btn.setVisible(False)
+            self.position_slider.setVisible(False)
+            self.position_label.setVisible(False)
+            # Hide video controls, show launch button
+            self.play_btn.setVisible(False)
+            self.pause_btn.setVisible(False)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Hide Panels" if self._panels_visible else "Show Panels")
+            self.stop_btn.clicked.disconnect()
+            self.stop_btn.clicked.connect(self._toggle_panels)
+            self.launch_btn.setVisible(True)
+            self.subtitle_button.setVisible(False)
+            self.volume_slider.setVisible(False)
+            self.vol_label.setVisible(False)
+        elif ep.is_image():
+            # For image episodes, set up the display
             self.current_image_index = 0
-        elif thumb and os.path.exists(thumb):
-            pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
-            if not pixmap.isNull():
-                self.preview_label.setPixmap(
-                    pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                )
-                return
-        # Fallback text when no preview image
-        self.preview_label.setPixmap(QPixmap())
-        self.preview_label.setText("Episode Preview")
-
-        # Update subtitle button state based on whether subtitles exist and not audio
-        sub_path = ep.resolved_subtitle()
-        has_subs = sub_path and os.path.exists(sub_path)
-        is_audio = ep.is_audio()
-        if is_audio or not has_subs:
-            self.subtitle_button.setEnabled(False)
-            self.subtitle_action.setEnabled(False)
-            self.subtitle_button.setChecked(False)
-            self.subtitle_action.setChecked(False)
+            self._show_image(ep.resolved_images()[self.current_image_index])
+            self.video_surface.setVisible(False)
+            self.preview_label.setVisible(True)
+            if len(ep.images) > 1:
+                self.back_btn.setVisible(True)
+                self.next_btn.setVisible(True)
+                try:
+                    self.back_btn.clicked.disconnect()
+                    self.next_btn.clicked.disconnect()
+                except:
+                    pass
+                self.back_btn.clicked.connect(self._prev_image)
+                self.next_btn.clicked.connect(self._next_image)
+            else:
+                self.back_btn.setVisible(False)
+                self.next_btn.setVisible(False)
+            self.position_slider.setVisible(False)
+            self.position_label.setVisible(False)
+            # Hide video controls for images
+            self.play_btn.setVisible(False)
+            self.pause_btn.setVisible(False)
+            self.subtitle_button.setVisible(False)
+            self.volume_slider.setVisible(False)
+            self.vol_label.setVisible(False)
+            self.launch_btn.setVisible(False)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Hide Panels" if self._panels_visible else "Show Panels")
+            self.stop_btn.clicked.disconnect()
+            self.stop_btn.clicked.connect(self._toggle_panels)
         else:
-            self.subtitle_button.setEnabled(True)
-            self.subtitle_action.setEnabled(True)
-            self.subtitle_button.setChecked(self.subtitle_enabled)
-            self.subtitle_action.setChecked(self.subtitle_enabled)
+            # For audio and video, show thumbnail in preview
+            self.video_surface.setVisible(False)
+            thumb = ep.resolved_thumbnail()
+            if thumb and os.path.exists(thumb):
+                pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    self.preview_label.setPixmap(scaled_pixmap)
+            else:
+                self.preview_label.setPixmap(QPixmap())
+                self.preview_label.setText("Episode Preview")
+            self.preview_label.setVisible(True)
+            # Show media controls
+            self.play_btn.setVisible(True)
+            self.pause_btn.setVisible(True)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Stop")
+            self.stop_btn.clicked.disconnect()
+            self.stop_btn.clicked.connect(self._stop)
+            self.launch_btn.setVisible(False)
+            self.subtitle_button.setVisible(True)
+            self.volume_slider.setVisible(True)
+            self.vol_label.setVisible(True)
+            self.position_slider.setVisible(True)
+            self.position_label.setVisible(True)
+            self.back_btn.setVisible(False)
+            self.next_btn.setVisible(False)
 
     def _on_episode_double_clicked(self, item):
         ep = item.data(Qt.UserRole)
@@ -555,80 +648,49 @@ class DvdStylePlayer(QMainWindow):
 
     def _play_episode(self, ep):
         if ep.is_external_exe:
-            exe_path = ep.resolved_path()
-            if not os.path.exists(exe_path):
-                QMessageBox.critical(self, "Missing game", f"Cannot find embedded game: {exe_path}")
-                return
-            # Stop any current playback and deselect the currently playing episode
-            try:
-                if self.vlc_player:
-                    self._stop()
-            except Exception:
-                pass
-            try:
-                self.episode_list.clearSelection()
-                self.episode_list.setCurrentRow(-1)
-            except Exception:
-                pass
-
-            # Use QProcess so we can reliably get a finished signal and re-enable the UI
-            try:
-                # Stop any playback and clear selection
+            # For exe episodes, set up display like image episodes
+            self.current_episode = ep
+            self.video_surface.setVisible(False)
+            self.preview_label.setVisible(True)
+            if ep.images:
+                self.current_image_index = 0
+                self._show_image(ep.resolved_images()[self.current_image_index])
+                self.back_btn.setVisible(len(ep.images) > 1)
+                self.next_btn.setVisible(len(ep.images) > 1)
                 try:
-                    if self.vlc_player:
-                        self._stop()
-                except Exception:
+                    self.back_btn.clicked.disconnect()
+                    self.next_btn.clicked.disconnect()
+                except:
                     pass
-                try:
-                    self.episode_list.clearSelection()
-                    self.episode_list.setCurrentRow(-1)
-                except Exception:
-                    pass
-
-                self.setEnabled(False)
-
-                proc = QProcess(self)
-                proc.setWorkingDirectory(os.path.dirname(exe_path) or os.getcwd())
-
-                def on_finished(exit_code, exit_status):
-                    try:
-                        self.setEnabled(True)
-                        self.status.showMessage(f"Game exited: {ep.title}", 5000)
-                    finally:
-                        # clear reference
-                        try:
-                            self._external_process = None
-                        except Exception:
-                            pass
-
-                def on_error(err):
-                    try:
-                        self.setEnabled(True)
-                        QMessageBox.critical(self, "Launch failed", f"Failed to start game (QProcess error): {err}")
-                    finally:
-                        try:
-                            self._external_process = None
-                        except Exception:
-                            pass
-
-                proc.finished.connect(on_finished)
-                proc.errorOccurred.connect(on_error)
-                # Keep a reference so it doesn't get GC'd
-                self._external_process = proc
-                proc.start(exe_path)
-                if not proc.waitForStarted(2000):
-                    # Could not start within 2s; treat as error but keep UI responsive
-                    self.setEnabled(True)
-                    QMessageBox.critical(self, "Launch failed", f"Failed to start game: {exe_path}")
-                    self._external_process = None
+                self.back_btn.clicked.connect(self._prev_image)
+                self.next_btn.clicked.connect(self._next_image)
+            else:
+                thumb = ep.resolved_thumbnail()
+                if thumb and os.path.exists(thumb):
+                    pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
+                    if not pixmap.isNull():
+                        scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        self.preview_label.setPixmap(scaled_pixmap)
                 else:
-                    self.status.showMessage(f"Launched game: {ep.title}", 5000)
-            except Exception as e:
-                try:
-                    self.setEnabled(True)
-                except Exception:
-                    pass
-                QMessageBox.critical(self, "Launch failed", f"Failed to start game.\n{e}")
+                    self.preview_label.setPixmap(QPixmap())
+                    self.preview_label.setText("Game Preview")
+                self.back_btn.setVisible(False)
+                self.next_btn.setVisible(False)
+            self.position_slider.setVisible(False)
+            self.position_label.setVisible(False)
+            self._set_panels_visible(False)
+            # Hide video controls, show launch button
+            self.play_btn.setVisible(False)
+            self.pause_btn.setVisible(False)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Show Panels")
+            self.stop_btn.clicked.disconnect()
+            self.stop_btn.clicked.connect(self._toggle_panels)
+            self.launch_btn.setVisible(True)
+            self.subtitle_button.setVisible(False)
+            self.volume_slider.setVisible(False)
+            self.vol_label.setVisible(False)
+            self.status.showMessage(f"Ready to launch: {ep.title}", 3000)
             return
         elif ep.is_image():
             # For image episodes, just set up the display
@@ -640,6 +702,13 @@ class DvdStylePlayer(QMainWindow):
             if len(ep.images) > 1:
                 self.back_btn.setVisible(True)
                 self.next_btn.setVisible(True)
+                try:
+                    self.back_btn.clicked.disconnect()
+                    self.next_btn.clicked.disconnect()
+                except:
+                    pass
+                self.back_btn.clicked.connect(self._prev_image)
+                self.next_btn.clicked.connect(self._next_image)
             else:
                 self.back_btn.setVisible(False)
                 self.next_btn.setVisible(False)
@@ -652,6 +721,11 @@ class DvdStylePlayer(QMainWindow):
             self.subtitle_button.setVisible(False)
             self.volume_slider.setVisible(False)
             self.vol_label.setVisible(False)
+            self.launch_btn.setVisible(False)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Show Panels")
+            self.stop_btn.clicked.disconnect()
+            self.stop_btn.clicked.connect(self._toggle_panels)
             self.status.showMessage(f"Viewing: {ep.title}", 3000)
             return
         # For audio and video, proceed with VLC
@@ -694,6 +768,7 @@ class DvdStylePlayer(QMainWindow):
                     scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                     self.preview_label.setPixmap(scaled_pixmap)
             self.preview_label.setVisible(True)
+            self.launch_btn.setVisible(False)
             # Ensure subtitles are disabled for audio
             self.vlc_player.video_set_spu(-1)
         else:
@@ -701,8 +776,25 @@ class DvdStylePlayer(QMainWindow):
             try:
                 self.preview_label.setPixmap(QPixmap())
                 self.preview_label.setVisible(False)
+                self.video_surface.setVisible(True)
             except Exception:
                 pass
+            self.launch_btn.setVisible(False)
+
+        # Set common controls for media playback
+        self.play_btn.setVisible(True)
+        self.pause_btn.setVisible(True)
+        self.stop_btn.setVisible(True)
+        self.stop_btn.setText("Stop")
+        self.stop_btn.clicked.disconnect()
+        self.stop_btn.clicked.connect(self._stop)
+        self.subtitle_button.setVisible(True)
+        self.volume_slider.setVisible(True)
+        self.vol_label.setVisible(True)
+        self.position_slider.setVisible(True)
+        self.position_label.setVisible(True)
+        self.back_btn.setVisible(False)
+        self.next_btn.setVisible(False)
 
         # If subtitles should be enabled, try to enable the first subtitle track shortly after playback starts
         sub_path = ep.resolved_subtitle()
@@ -728,8 +820,72 @@ class DvdStylePlayer(QMainWindow):
         self.ui_timer.start()
         self.status.showMessage(f"Playing: {ep.title}", 3000)
 
-    def _pause(self):
-        self.vlc_player.pause()
+    def _launch_exe(self):
+        if not self.current_episode or not self.current_episode.is_external_exe:
+            return
+        exe_path = self.current_episode.resolved_path()
+        if not os.path.exists(exe_path):
+            QMessageBox.critical(self, "Missing game", f"Cannot find embedded game: {exe_path}")
+            return
+        # Store episode info before stopping
+        ep = self.current_episode
+        # Stop any current playback
+        try:
+            if self.vlc_player:
+                self._stop()
+        except Exception:
+            pass
+
+        self.setEnabled(False)
+        self.launch_btn.setEnabled(False)
+
+        proc = QProcess(self)
+        proc.setWorkingDirectory(os.path.dirname(exe_path) or os.getcwd())
+
+        def on_finished(exit_code, exit_status):
+            try:
+                self.setEnabled(True)
+                self.launch_btn.setEnabled(True)
+                self.status.showMessage(f"Game exited: {ep.title}", 5000)
+            finally:
+                # clear reference
+                try:
+                    self._external_process = None
+                except Exception:
+                    pass
+
+        def on_error(err):
+            try:
+                self.setEnabled(True)
+                self.launch_btn.setEnabled(True)
+                QMessageBox.critical(self, "Launch failed", f"Failed to start game (QProcess error): {err}")
+            finally:
+                try:
+                    self._external_process = None
+                except Exception:
+                    pass
+
+        proc.finished.connect(on_finished)
+        proc.errorOccurred.connect(on_error)
+        # Keep a reference so it doesn't get GC'd
+        self._external_process = proc
+        proc.start(exe_path)
+        if not proc.waitForStarted(2000):
+            # Could not start within 2s; treat as error but keep UI responsive
+            self.setEnabled(True)
+            self.launch_btn.setEnabled(True)
+            QMessageBox.critical(self, "Launch failed", f"Failed to start game: {exe_path}")
+            self._external_process = None
+        else:
+            self.status.showMessage(f"Launched game: {ep.title}", 5000)
+
+    def _toggle_panels(self):
+        visible = not self._panels_visible
+        self._set_panels_visible(visible)
+        self.stop_btn.setText("Hide Panels" if visible else "Show Panels")
+        # Reload image size if currently viewing an image or exe episode
+        if self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images:
+            self._show_image(self.current_episode.resolved_images()[self.current_image_index])
 
     def _toggle_play_pause(self):
         try:
@@ -757,6 +913,9 @@ class DvdStylePlayer(QMainWindow):
             self.vol_label.setVisible(True)
             self.play_btn.setVisible(True)
             self.pause_btn.setVisible(True)
+            self.stop_btn.setVisible(True)
+            self.stop_btn.setText("Stop")
+            self.launch_btn.setVisible(False)
             self.subtitle_button.setVisible(True)
             self.volume_slider.setVisible(True)
         except Exception:
@@ -867,19 +1026,27 @@ class DvdStylePlayer(QMainWindow):
         if os.path.exists(image_path):
             pixmap = self._load_scaled_pixmap(image_path, self.preview_label.width())
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                if self.current_episode and self.current_episode.is_external_exe:
+                    if not self._panels_visible:
+                        # Panels hidden, fit screen
+                        scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    else:
+                        # Panels shown, 600x600
+                        scaled_pixmap = pixmap.scaled(QSize(600, 600), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                else:
+                    scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 self.preview_label.setPixmap(scaled_pixmap)
         else:
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText("Image not found")
 
     def _prev_image(self):
-        if self.current_episode and self.current_episode.is_image() and self.current_episode.images:
+        if self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images:
             self.current_image_index = (self.current_image_index - 1) % len(self.current_episode.images)
             self._show_image(self.current_episode.resolved_images()[self.current_image_index])
 
     def _next_image(self):
-        if self.current_episode and self.current_episode.is_image() and self.current_episode.images:
+        if self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images:
             self.current_image_index = (self.current_image_index + 1) % len(self.current_episode.images)
             self._show_image(self.current_episode.resolved_images()[self.current_image_index])
 
@@ -1023,6 +1190,14 @@ class DvdStylePlayer(QMainWindow):
                     self.position_label.setText(f"{self._format_ms(pos)} / {self._format_ms(length)}")
                 except Exception as e:
                     print(f"Error updating time label: {e}")
+            # Update pause button text
+            try:
+                if self.vlc_player.is_playing():
+                    self.pause_btn.setText("Pause")
+                else:
+                    self.pause_btn.setText("Resume")
+            except Exception:
+                pass
         except Exception as e:
             print(f"Error in _sync_ui: {e}")
 
