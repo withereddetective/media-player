@@ -38,7 +38,13 @@ class Episode:
         self.length_str = None
 
     def resolved_path(self):
-        return resource_path(self.path)
+        if not self.path:
+            return None
+        # If absolute path, return as-is; otherwise join with base_dir
+        if os.path.isabs(self.path):
+            return self.path
+        return os.path.normpath(os.path.join(self.base_dir, self.path))
+
 
     def resolved_subtitle(self):
         if not self.subtitle_path:
@@ -135,32 +141,35 @@ class Episode:
     def get_length_str(self):
         if self.length_str is not None:
             return self.length_str
+
         if self.is_image():
             self.length_str = f"{len(self.images)} images"
             return self.length_str
-        if self.path and os.path.exists(self.resolved_path()):
-            try:
-                instance = vlc.Instance('--no-video', '--no-audio')  # Minimal instance for metadata only
-                media = instance.media_new(self.resolved_path())
-                media.parse_with_options(vlc.MediaParseFlag.local, 5000)  # Timeout 5s
-                duration = media.get_duration()
-                if duration > 0:
-                    s = int(duration // 1000)
-                    h = s // 3600
-                    m = (s % 3600) // 60
-                    sec = s % 60
-                    if h:
-                        self.length_str = f"{h}:{m:02d}:{sec:02d}"
-                    else:
-                        self.length_str = f"{m:02d}:{sec:02d}"
-                else:
-                    self.length_str = "Unknown"
-            except Exception as e:
-                print(f"Error getting duration for {self.path}: {e}")
-                self.length_str = "Unknown"
-        else:
+
+        media_path = self.resolved_path()
+        if not media_path or not os.path.exists(media_path):
+            self.length_str = ""   # don't show "Unknown" when file missing
+            return self.length_str
+
+        try:
+            instance = vlc.Instance('--no-xlib')  # minimal instance
+            media = instance.media_new(os.path.abspath(media_path))
+            # Parse synchronously with timeout loop (safer than relying on flags)
+            media.parse()
+            duration = media.get_duration()
+            if duration and duration > 0:
+                s = int(duration // 1000)
+                h = s // 3600
+                m = (s % 3600) // 60
+                sec = s % 60
+                self.length_str = f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
+            else:
+                self.length_str = ""   # prefer empty over "Unknown"
+        except Exception as e:
+            print(f"Error getting duration for {media_path}: {e}")
             self.length_str = ""
         return self.length_str
+
 
 
 class Season:
@@ -511,7 +520,11 @@ class DvdStylePlayer(QMainWindow):
         for ep in season.episodes:
             label = ep.title + ("  [Game]" if ep.is_external_exe else ("  [Images]" if ep.is_image() else ""))
             if not ep.is_external_exe:
-                length = ep.get_length_str()
+                length = ""
+                if ep.is_image():
+                    length = ep.get_length_str()
+                elif ep.path:
+                    length = ep.get_length_str()
                 if length:
                     label += "\n" + length
             item = QListWidgetItem(label)
