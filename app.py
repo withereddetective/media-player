@@ -12,11 +12,88 @@ from PySide6.QtWidgets import (
     QSplitter, QMessageBox, QStyle, QSlider, QStatusBar, QWidget, QSizePolicy
 )
 
-import vlc
+import vlc 
 
+
+
+class PixmapCache:
+    """
+    LRU (Least Recently Used) cache for QPixmap objects to avoid reloading and rescaling images.
+    This improves performance by storing scaled pixmaps in memory.
+    """
+    def __init__(self, max_size=1000):
+        self.cache = OrderedDict()  # OrderedDict to track access order for LRU
+        self.max_size = max_size  # Maximum number of items in cache
+
+    def get(self, key):
+        """Retrieve a pixmap from cache if it exists, and mark it as recently used."""
+        if key in self.cache:
+            # Move to end (most recently used)
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        return None
+
+    def put(self, key, pixmap):
+        """Store a pixmap in the cache, evicting the least recently used if necessary."""
+        if key in self.cache:
+            self.cache.move_to_end(key)  # Update access order
+        else:
+            if len(self.cache) >= self.max_size:
+                self.cache.popitem(last=False)  # Remove least recently used
+        self.cache[key] = pixmap
+
+    def load_scaled_pixmap(self, path: str, target_width: int) -> QPixmap:
+        """
+        Load an image using QImageReader and scale it as it's read to avoid
+        consuming large amounts of memory (works around Qt QPixmap limits).
+        Uses caching to prevent reloading the same image multiple times.
+        """
+        if not path or not os.path.exists(path):
+            return QPixmap()
+        # Use cache key combining path and width to handle different scales
+        key = f"{os.path.abspath(path)}|{int(target_width)}"
+        cached_pixmap = self.get(key)
+        if cached_pixmap:
+            return cached_pixmap
+
+        try:
+            reader = QImageReader(path)
+            size = reader.size()
+            if size.isValid() and size.width() > target_width:
+                new_h = int(size.height() * (target_width / size.width()))
+                reader.setScaledSize(QSize(target_width, new_h))
+            img = reader.read()
+            if img.isNull():
+                return QPixmap()
+            pm = QPixmap.fromImage(img)
+            self.put(key, pm)
+            return pm
+        except Exception as e:
+            print(f"Error loading pixmap for {path}: {e}")
+            # Fallback: let QPixmap try, then scale down
+            try:
+                pm = QPixmap(path)
+                scaled = pm.scaled(target_width, target_width, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.put(key, scaled)
+                return scaled
+            except Exception as e2:
+                print(f"Fallback pixmap load failed for {path}: {e2}")
+                return QPixmap()
+
+    def preload(self, paths, target_width):
+        """
+        Preload pixmaps for the given paths at the specified target width.
+        This will load and cache all thumbnails before the UI is shown.
+        """
+        for path in paths:
+            if path and os.path.exists(path):
+                self.load_scaled_pixmap(path, target_width)
 
 
 def resource_path(relative_path):
+    """
+    Get the absolute path to a resource, works for both development and PyInstaller bundles.
+    """
     if hasattr(sys, '_MEIPASS'):
         # Running from a PyInstaller bundle
         return os.path.join(sys._MEIPASS, relative_path)
@@ -26,16 +103,20 @@ def resource_path(relative_path):
 
 
 class Episode:
+    """
+    Represents a single episode, which can be a video, audio, image set, or external executable.
+    Handles path resolution for media files, subtitles, thumbnails, and images.
+    """
     def __init__(self, title, path, is_external_exe=False,
                  subtitle_path=None, thumbnail_path=None, images=None, base_dir=None):
         self.title = title
-        self.path = path
-        self.is_external_exe = is_external_exe
+        self.path = path  # Path to media file or executable
+        self.is_external_exe = is_external_exe  # True if this is an external game/app
         self.subtitle_path = subtitle_path
         self.thumbnail_path = thumbnail_path
-        self.images = images or []
-        self.base_dir = base_dir or os.getcwd()
-        self.length_str = None
+        self.images = images or []  # List of image paths for image episodes
+        self.base_dir = base_dir or os.getcwd()  # Base directory for relative paths
+        self.length_str = None  # Cached length string for display
 
     def resolved_path(self):
         if not self.path:
@@ -173,98 +254,123 @@ class Episode:
 
 
 class Season:
+    """
+    Represents a season containing multiple episodes and an optional logo.
+    """
     def __init__(self, title, episodes, logo_path=None):
         self.title = title
-        self.episodes = episodes
+        self.episodes = episodes  # List of Episode objects
         self.logo_path = logo_path
 
     def resolved_logo(self):
+        """Get the absolute path to the season logo."""
         return resource_path(self.logo_path) if self.logo_path else None
 
 
 class DvdStylePlayer(QMainWindow):
+    """
+    Main application window for the DVD-style media player.
+    Handles UI layout, media playback, and user interactions.
+    """
     def __init__(self, seasons):
         super().__init__()
-        self.setWindowTitle("DVD-Style Menu")
+        self.setWindowTitle("Menu Window")
         self.resize(1200, 750)
 
+        # Create the main UI layout: left panel for seasons/episodes, right for video/controls
         # Left panel: seasons + episodes
         splitter = QSplitter(Qt.Horizontal)
         self.splitter = splitter
-        self.season_list = QListWidget()
-        self.episode_list = QListWidget()
+        self.season_list = QListWidget()  # List of seasons
+        self.episode_list = QListWidget()  # List of episodes in selected season
 
-        # Make icons larger so thumbnails/logos are visible
+        # Configure list views for icon mode with thumbnails
         # Use IconMode so icons are shown above text; make all icons the same width.
         self.season_list.setViewMode(QListView.IconMode)
         self.episode_list.setViewMode(QListView.IconMode)
 
+        # Set icon dimensions for thumbnails
         self.ICON_WIDTH = 240
         self.ICON_HEIGHT = 135
         self.season_list.setIconSize(QSize(self.ICON_WIDTH, self.ICON_HEIGHT))
         self.episode_list.setIconSize(QSize(self.ICON_WIDTH, self.ICON_HEIGHT))
+        # Set grid size to accommodate icon + text
         self.season_list.setGridSize(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 50))
         self.episode_list.setGridSize(QSize(self.ICON_WIDTH + 20, self.ICON_HEIGHT + 50))
 
+        # Set fixed width for season list (one column wide)
+        season_width = self.ICON_WIDTH + 40  # padding
+        self.season_list.setFixedWidth(season_width)
+        self.season_list.setMinimumWidth(season_width)
+        self.season_list.setMaximumWidth(season_width)
+
+        # Add lists to splitter
         splitter.addWidget(self.season_list)
         splitter.addWidget(self.episode_list)
-        splitter.setSizes([280, 380])
+        # Prevent user from collapsing or resizing the panels
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        # Set initial sizes, but layout will override
+        splitter.setSizes([season_width, 400])
 
         # Right panel: video surface + preview + controls
-        self.video_surface = QWidget()
+        self.video_surface = QWidget()  # Widget where VLC renders video
         self.video_surface.setStyleSheet("background-color: black;")
-        self.video_surface.installEventFilter(self)
+        self.video_surface.installEventFilter(self)  # For click-to-play
 
-        self.preview_label = QLabel("Episode Preview")
+        self.preview_label = QLabel("Episode Preview")  # Shows thumbnails or images
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.preview_label.setMinimumHeight(150)
 
-        controls = self._build_controls()
+        controls = self._build_controls()  # Create playback controls
 
+        # Layout the right panel
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.addWidget(self.video_surface)
         right_layout.addWidget(self.preview_label)
         right_layout.addLayout(controls)
 
+        # Main container with splitter and right panel
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.addWidget(splitter)
-        layout.addWidget(right_panel)
-        self.setCentralWidget(container)
+        layout.addWidget(splitter, 1)  # splitter takes half the width
+        layout.addWidget(right_panel, 1)  # right panel takes half the width
+        self.container = container
+
+        # Loading label for initial display
+        self.loading_label = QLabel("Loading...")
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setStyleSheet("font-size: 48px; color: white; background-color: black;")
+        self.setCentralWidget(self.loading_label)
 
         # Status bar
         self.status = QStatusBar()
         self.setStatusBar(self.status)
 
-        # VLC setup
+        # Initialize VLC for media playback
         self.vlc_instance = vlc.Instance()
         self.vlc_player = self.vlc_instance.media_player_new()
         try:
             win_id = int(self.video_surface.winId())
-            self.vlc_player.set_hwnd(win_id)  # Windows binding
+            self.vlc_player.set_hwnd(win_id)  # Bind VLC output to the video surface widget
         except Exception as e:
             QMessageBox.critical(self, "Video init error", f"Failed to bind video surface.\n{e}")
 
-        self.current_episode = None
-        self.subtitle_enabled = True
-        # Panels visibility state
-        self._panels_visible = True
-        # Pixmap cache (LRU)
-        self._pixmap_cache = OrderedDict()
-        self._pixmap_cache_max = 200
-        # Track if video was playing during slider drag
-        self.was_playing_during_drag = False
-        # Current image index for image episodes
-        self.current_image_index = 0
+        # State variables
+        self.current_episode = None  # Currently selected episode
+        self.subtitle_enabled = True  # Whether subtitles are enabled
+        self._panels_visible = True  # Whether side panels are shown
+        self._pixmap_cache = PixmapCache(max_size=1000)  # Cache for images
+        self.was_playing_during_drag = False  # For pausing during seek
+        self.current_image_index = 0  # For image episodes
         # Original splitter sizes for panel restoration
         self._original_sizes = None
 
-        # UI sync timer
+        # UI sync timer for updating playback progress
         self.ui_timer = QTimer(self)
-        # Slightly reduce UI update frequency to lower CPU usage while keeping UI responsive
-        self.ui_timer.setInterval(300)
+        self.ui_timer.setInterval(300)  # Update every 300ms
         self.ui_timer.timeout.connect(self._sync_ui)
 
         # Build menu and populate data
@@ -272,19 +378,20 @@ class DvdStylePlayer(QMainWindow):
         self.seasons = seasons
         self._populate_seasons()
 
-        # Attach VLC end-of-media event to handle when playback ends
+        # Attach VLC event for end of media
         try:
             em = self.vlc_player.event_manager()
             em.event_attach(vlc.EventType.MediaPlayerEndReached, lambda e: QTimer.singleShot(0, self._on_media_ended))
         except Exception:
             pass
 
-        # Signals
+        # Connect UI signals
         self.season_list.currentItemChanged.connect(self._on_season_selected)
         self.episode_list.currentItemChanged.connect(self._on_episode_selected)
         self.episode_list.itemDoubleClicked.connect(self._on_episode_double_clicked)
 
     def _build_controls(self):
+        """Create and configure the media playback control buttons and sliders."""
         self.play_btn = QPushButton()
         self.play_btn.setText("Start")
         self.play_btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
@@ -368,57 +475,7 @@ class DvdStylePlayer(QMainWindow):
         return f"{m:02d}:{sec:02d}"
 
     def _load_scaled_pixmap(self, path: str, target_width: int) -> QPixmap:
-        """
-        Load an image using QImageReader and scale it as it's read to avoid
-        consuming large amounts of memory (works around Qt QPixmap limits).
-        """
-        if not path or not os.path.exists(path):
-            return QPixmap()
-        # Use cache key (path, width) to avoid re-decoding large images repeatedly
-        key = f"{os.path.abspath(path)}|{int(target_width)}"
-        try:
-            if key in self._pixmap_cache:
-                # Move to end (most recently used)
-                pm = self._pixmap_cache.pop(key)
-                self._pixmap_cache[key] = pm
-                return pm
-        except Exception:
-            pass
-        try:
-            reader = QImageReader(path)
-            size = reader.size()
-            if size.isValid() and size.width() > target_width:
-                new_h = int(size.height() * (target_width / size.width()))
-                reader.setScaledSize(QSize(target_width, new_h))
-            img = reader.read()
-            if img.isNull():
-                return QPixmap()
-            pm = QPixmap.fromImage(img)
-            try:
-                # store in LRU cache
-                self._pixmap_cache[key] = pm
-                if len(self._pixmap_cache) > self._pixmap_cache_max:
-                    # pop oldest
-                    self._pixmap_cache.popitem(last=False)
-            except Exception:
-                pass
-            return pm
-        except Exception as e:
-            print(f"Error loading pixmap for {path}: {e}")
-            # Fallback: let QPixmap try, then scale down
-            try:
-                pm = QPixmap(path)
-                scaled = pm.scaled(target_width, target_width, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                try:
-                    self._pixmap_cache[key] = scaled
-                    if len(self._pixmap_cache) > self._pixmap_cache_max:
-                        self._pixmap_cache.popitem(last=False)
-                except Exception:
-                    pass
-                return scaled
-            except Exception as e2:
-                print(f"Fallback pixmap load failed for {path}: {e2}")
-                return QPixmap()
+        return self._pixmap_cache.load_scaled_pixmap(path, target_width)
 
     def _build_menu(self):
         menubar = self.menuBar()
@@ -478,6 +535,25 @@ class DvdStylePlayer(QMainWindow):
         if self.season_list.count() > 0:
             self.season_list.setCurrentRow(0)
 
+    def _preload_thumbnails(self):
+        """Preload all thumbnail images into the cache before showing the window."""
+        paths = set()
+        for season in self.seasons:
+            logo = season.resolved_logo()
+            if logo:
+                paths.add(logo)
+            for ep in season.episodes:
+                thumb = ep.resolved_thumbnail()
+                if thumb:
+                    paths.add(thumb)
+                # Also preload images for image episodes
+                paths.update(ep.resolved_images())
+        # Preload at the icon width for list views
+        self._pixmap_cache.preload(paths, self.ICON_WIDTH)
+        # Also preload at a larger size for preview (approximate)
+        preview_width = 400  # approximate preview width
+        self._pixmap_cache.preload(paths, preview_width)
+
     def _set_panels_visible(self, visible: bool):
         # The splitter is the left-side selection area; hiding it gives the video more room
         try:
@@ -513,6 +589,7 @@ class DvdStylePlayer(QMainWindow):
             pass
 
     def _on_season_selected(self, current, previous):
+        """Populate the episode list when a season is selected."""
         self.episode_list.clear()
         if not current:
             return
@@ -541,6 +618,7 @@ class DvdStylePlayer(QMainWindow):
             self.episode_list.setCurrentRow(0)
 
     def _on_episode_selected(self, current, previous):
+        """Update the preview area when an episode is selected."""
         if not current:
             self.current_episode = None
             return
@@ -622,17 +700,22 @@ class DvdStylePlayer(QMainWindow):
             self.stop_btn.clicked.connect(self._toggle_panels)
         else:
             # For audio and video, show thumbnail in preview
-            self.video_surface.setVisible(False)
-            thumb = ep.resolved_thumbnail()
-            if thumb and os.path.exists(thumb):
-                pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
-                if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                    self.preview_label.setPixmap(scaled_pixmap)
+            if ep.is_audio() or not self.vlc_player.is_playing():
+                self.video_surface.setVisible(False)
+                thumb = ep.resolved_thumbnail()
+                if thumb and os.path.exists(thumb):
+                    pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
+                    if not pixmap.isNull():
+                        scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        self.preview_label.setPixmap(scaled_pixmap)
+                else:
+                    self.preview_label.setPixmap(QPixmap())
+                    self.preview_label.setText("Episode Preview")
+                self.preview_label.setVisible(True)
             else:
-                self.preview_label.setPixmap(QPixmap())
-                self.preview_label.setText("Episode Preview")
-            self.preview_label.setVisible(True)
+                # Playing video, keep video surface visible
+                self.video_surface.setVisible(True)
+                self.preview_label.setVisible(False)
             # Show media controls
             self.play_btn.setVisible(True)
             self.pause_btn.setVisible(True)
@@ -660,6 +743,7 @@ class DvdStylePlayer(QMainWindow):
             self._play_episode(ep)
 
     def _play_episode(self, ep):
+        """Start playback of the given episode."""
         if ep.is_external_exe:
             # For exe episodes, set up display like image episodes
             self.current_episode = ep
@@ -1185,6 +1269,17 @@ class DvdStylePlayer(QMainWindow):
             self.fullscreen_action.setChecked(checked)
         except Exception:
             pass
+        # Refresh episode list layout after fullscreen toggle
+        current_season_item = self.season_list.currentItem()
+        if current_season_item:
+            current_episode = self.current_episode
+            self._on_season_selected(current_season_item, None)
+            if current_episode:
+                for i in range(self.episode_list.count()):
+                    item = self.episode_list.item(i)
+                    if item.data(Qt.UserRole) == current_episode:
+                        self.episode_list.setCurrentRow(i)
+                        break
 
     def _sync_ui(self):
         try:
@@ -1214,11 +1309,25 @@ class DvdStylePlayer(QMainWindow):
         except Exception as e:
             print(f"Error in _sync_ui: {e}")
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Refresh episode list layout when window is resized
+        current_season_item = self.season_list.currentItem()
+        if current_season_item:
+            current_episode = self.current_episode
+            self._on_season_selected(current_season_item, None)
+            if current_episode:
+                for i in range(self.episode_list.count()):
+                    item = self.episode_list.item(i)
+                    if item.data(Qt.UserRole) == current_episode:
+                        self.episode_list.setCurrentRow(i)
+                        break
+
     def _about(self):
         QMessageBox.information(
             self,
             "About",
-            "DVD-Style Menu Player\n"
+            "Menu Window Player\n"
             "• PySide6 UI\n"
             "• VLC backend via python-vlc\n"
             "• Episode thumbnails and season logos via manifest\n"
@@ -1284,6 +1393,7 @@ def load_manifest(manifest_path: str):
 
 
 def main():
+    """Main entry point: load manifest, create window, preload thumbnails, and start app."""
     app = QApplication(sys.argv)
 
     manifest_file = resource_path("manifest.json")
@@ -1294,6 +1404,8 @@ def main():
     seasons = load_manifest(manifest_file)
     window = DvdStylePlayer(seasons)
     window.show()
+    window._preload_thumbnails()
+    window.setCentralWidget(window.container)
     sys.exit(app.exec())
 
 
