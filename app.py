@@ -4,7 +4,7 @@ import sys
 import subprocess
 
 from collections import OrderedDict
-from PySide6.QtCore import Qt, QSize, QTimer, QProcess, QEvent
+from PySide6.QtCore import Qt, QSize, QTimer, QProcess, QEvent, QPropertyAnimation, QEasingCurve, QRect
 from PySide6.QtGui import QAction, QIcon, QPixmap, QImageReader
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QListWidgetItem, QListView,
@@ -12,8 +12,48 @@ from PySide6.QtWidgets import (
     QSplitter, QMessageBox, QStyle, QSlider, QStatusBar, QWidget, QSizePolicy
 )
 
-import vlc 
+import vlc
 
+"""
+===============================================================================
+                        Media Player Application
+===============================================================================
+
+A comprehensive DVD-style media player built with PySide6 and VLC for Python.
+
+OVERVIEW:
+    This application provides a user-friendly interface for browsing and playing
+    various media types including videos, audio files, image galleries, and
+    launching external executables. It features a classic DVD menu-style navigation
+    with thumbnail previews, subtitle support, fullscreen playback, and customizable
+    UI elements.
+
+KEY FEATURES:
+    - DVD-style navigation with season/episode organization
+    - Multi-format media support (MP4, MP3, images, executables)
+    - Thumbnail-based browsing with LRU caching for performance
+    - Subtitle toggle and fullscreen mode
+    - Volume control and seeking capabilities
+    - Keyboard shortcuts for enhanced usability
+    - Responsive UI with collapsible side panels
+    - Smooth image transition animations
+
+TECHNICAL DETAILS:
+    - Built using PySide6 (Qt for Python) for cross-platform GUI
+    - Powered by VLC media player backend for robust playback
+    - Implements LRU caching for efficient image handling
+    - Supports PyInstaller bundling for distribution
+
+REQUIREMENTS:
+    - Python 3.8+
+    - PySide6
+    - python-vlc
+    - VLC Media Player
+
+AUTHOR: Kyle Haynes
+VERSION: 1.1.0
+DATE LAST UPDATED: March 8th, 2026
+""" 
 
 
 class PixmapCache:
@@ -289,6 +329,12 @@ class DvdStylePlayer(QMainWindow):
         self.season_list.setViewMode(QListView.IconMode)
         self.episode_list.setViewMode(QListView.IconMode)
 
+        # Disable dragging to prevent users from moving buttons around
+        self.season_list.setDragEnabled(False)
+        self.season_list.setAcceptDrops(False)
+        self.episode_list.setDragEnabled(False)
+        self.episode_list.setAcceptDrops(False)
+
         # Set icon dimensions for thumbnails
         self.ICON_WIDTH = 240
         self.ICON_HEIGHT = 135
@@ -315,13 +361,30 @@ class DvdStylePlayer(QMainWindow):
 
         # Right panel: video surface + preview + controls
         self.video_surface = QWidget()  # Widget where VLC renders video
-        self.video_surface.setStyleSheet("background-color: black;")
+        self.video_surface.setStyleSheet("background-color: #333333;")
         self.video_surface.installEventFilter(self)  # For click-to-play
 
-        self.preview_label = QLabel("Episode Preview")  # Shows thumbnails or images
+        # Preview label for thumbnails (video/audio)
+        self.preview_label = QLabel()
         self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.preview_label.setMinimumHeight(150)
+        self.preview_label.setStyleSheet("background-color: #333333;")
+
+        # Image container for smooth sliding animations
+        self.image_container = QWidget()
+        self.image_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.image_container.setMinimumHeight(150)
+        self.image_container.setStyleSheet("background-color: #333333;")
+
+        # Two labels for sliding animation
+        self.current_image_label = QLabel(self.image_container)
+        self.current_image_label.setAlignment(Qt.AlignCenter)
+        self.current_image_label.setStyleSheet("background-color: #333333;")
+        self.next_image_label = QLabel(self.image_container)
+        self.next_image_label.setAlignment(Qt.AlignCenter)
+        self.next_image_label.setStyleSheet("background-color: #333333;")
+
+        # Initially position labels
+        self._update_image_label_sizes()
 
         controls = self._build_controls()  # Create playback controls
 
@@ -330,6 +393,7 @@ class DvdStylePlayer(QMainWindow):
         right_layout = QVBoxLayout(right_panel)
         right_layout.addWidget(self.video_surface)
         right_layout.addWidget(self.preview_label)
+        right_layout.addWidget(self.image_container)
         right_layout.addLayout(controls)
 
         # Main container with splitter and right panel
@@ -339,10 +403,12 @@ class DvdStylePlayer(QMainWindow):
         layout.addWidget(right_panel, 1)  # right panel takes half the width
         self.container = container
 
+        self.animation_in_progress = False
+
         # Loading label for initial display
         self.loading_label = QLabel("Loading...")
         self.loading_label.setAlignment(Qt.AlignCenter)
-        self.loading_label.setStyleSheet("font-size: 48px; color: white; background-color: black;")
+        self.loading_label.setStyleSheet("font-size: 48px; color: white; background-color: #333333;")
         self.setCentralWidget(self.loading_label)
 
         # Status bar
@@ -464,6 +530,15 @@ class DvdStylePlayer(QMainWindow):
         return controls
 
     def _format_ms(self, ms: int) -> str:
+        """
+        Format milliseconds into a time string (HH:MM:SS or MM:SS).
+
+        Args:
+            ms (int): Time in milliseconds.
+
+        Returns:
+            str: Formatted time string.
+        """
         if ms is None or ms < 0:
             return "00:00"
         s = int(ms // 1000)
@@ -477,7 +552,18 @@ class DvdStylePlayer(QMainWindow):
     def _load_scaled_pixmap(self, path: str, target_width: int) -> QPixmap:
         return self._pixmap_cache.load_scaled_pixmap(path, target_width)
 
+    def _update_image_label_sizes(self):
+        """Update the size and position of image labels to match the container."""
+        width = self.image_container.width()
+        height = self.image_container.height()
+        self.current_image_label.setGeometry(0, 0, width, height)
+        self.next_image_label.setGeometry(width, 0, width, height)  # Initially off-screen to the right
+
     def _build_menu(self):
+        """
+        Build the application menu bar with File, View, and Help menus.
+        Includes actions for exit, subtitles, fullscreen, panels visibility, and about.
+        """
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("&File")
@@ -508,6 +594,10 @@ class DvdStylePlayer(QMainWindow):
         help_menu.addAction(about_action)
 
     def _populate_seasons(self):
+        """
+        Populate the season list widget with season items, including logos and episode counts.
+        Automatically selects the first season if available.
+        """
         self.season_list.clear()
         for season in self.seasons:
             episodes_count = sum(1 for ep in season.episodes if not ep.is_audio())
@@ -555,6 +645,12 @@ class DvdStylePlayer(QMainWindow):
         self._pixmap_cache.preload(paths, preview_width)
 
     def _set_panels_visible(self, visible: bool):
+        """
+        Show or hide the side panels (season and episode lists) to give more room to the video.
+
+        Args:
+            visible (bool): True to show panels, False to hide.
+        """
         # The splitter is the left-side selection area; hiding it gives the video more room
         try:
             self._panels_visible = visible
@@ -628,8 +724,9 @@ class DvdStylePlayer(QMainWindow):
         if ep.is_external_exe:
             # For exe episodes, set up display like image episodes
             self.video_surface.setVisible(False)
-            self.preview_label.setVisible(True)
             if ep.images:
+                self.image_container.setVisible(True)
+                self.preview_label.setVisible(False)
                 self.current_image_index = 0
                 self._show_image(ep.resolved_images()[self.current_image_index])
                 self.back_btn.setVisible(len(ep.images) > 1)
@@ -642,6 +739,8 @@ class DvdStylePlayer(QMainWindow):
                 self.back_btn.clicked.connect(self._prev_image)
                 self.next_btn.clicked.connect(self._next_image)
             else:
+                self.image_container.setVisible(False)
+                self.preview_label.setVisible(True)
                 thumb = ep.resolved_thumbnail()
                 if thumb and os.path.exists(thumb):
                     pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
@@ -668,10 +767,11 @@ class DvdStylePlayer(QMainWindow):
             self.vol_label.setVisible(False)
         elif ep.is_image():
             # For image episodes, set up the display
+            self.video_surface.setVisible(False)
+            self.image_container.setVisible(True)
+            self.preview_label.setVisible(False)
             self.current_image_index = 0
             self._show_image(ep.resolved_images()[self.current_image_index])
-            self.video_surface.setVisible(False)
-            self.preview_label.setVisible(True)
             if len(ep.images) > 1:
                 self.back_btn.setVisible(True)
                 self.next_btn.setVisible(True)
@@ -700,6 +800,7 @@ class DvdStylePlayer(QMainWindow):
             self.stop_btn.clicked.connect(self._toggle_panels)
         else:
             # For audio and video, show thumbnail in preview
+            self.image_container.setVisible(False)
             if ep.is_audio() or not self.vlc_player.is_playing():
                 self.video_surface.setVisible(False)
                 thumb = ep.resolved_thumbnail()
@@ -733,10 +834,19 @@ class DvdStylePlayer(QMainWindow):
             self.next_btn.setVisible(False)
 
     def _on_episode_double_clicked(self, item):
+        """
+        Handle double-click on an episode item to start playback.
+
+        Args:
+            item: The QListWidgetItem that was double-clicked.
+        """
         ep = item.data(Qt.UserRole)
         self._play_episode(ep)
 
     def _play_selected(self):
+        """
+        Start playback of the currently selected episode.
+        """
         item = self.episode_list.currentItem()
         if item:
             ep = item.data(Qt.UserRole)
@@ -748,8 +858,9 @@ class DvdStylePlayer(QMainWindow):
             # For exe episodes, set up display like image episodes
             self.current_episode = ep
             self.video_surface.setVisible(False)
-            self.preview_label.setVisible(True)
             if ep.images:
+                self.image_container.setVisible(True)
+                self.preview_label.setVisible(False)
                 self.current_image_index = 0
                 self._show_image(ep.resolved_images()[self.current_image_index])
                 self.back_btn.setVisible(len(ep.images) > 1)
@@ -762,6 +873,8 @@ class DvdStylePlayer(QMainWindow):
                 self.back_btn.clicked.connect(self._prev_image)
                 self.next_btn.clicked.connect(self._next_image)
             else:
+                self.image_container.setVisible(False)
+                self.preview_label.setVisible(True)
                 thumb = ep.resolved_thumbnail()
                 if thumb and os.path.exists(thumb):
                     pixmap = self._load_scaled_pixmap(thumb, self.preview_label.width())
@@ -792,10 +905,11 @@ class DvdStylePlayer(QMainWindow):
         elif ep.is_image():
             # For image episodes, just set up the display
             self.current_episode = ep
+            self.video_surface.setVisible(False)
+            self.image_container.setVisible(True)
+            self.preview_label.setVisible(False)
             self.current_image_index = 0
             self._show_image(ep.resolved_images()[self.current_image_index])
-            self.video_surface.setVisible(False)
-            self.preview_label.setVisible(True)
             if len(ep.images) > 1:
                 self.back_btn.setVisible(True)
                 self.next_btn.setVisible(True)
@@ -855,6 +969,7 @@ class DvdStylePlayer(QMainWindow):
 
         self.current_episode = ep
         # Handle audio vs video vs image display
+        self.image_container.setVisible(False)
         if ep.is_audio():
             # For audio, hide video surface and show thumbnail in preview
             self.video_surface.setVisible(False)
@@ -997,12 +1112,13 @@ class DvdStylePlayer(QMainWindow):
         self.vlc_player.stop()
         self.ui_timer.stop()
         self.position_slider.setValue(0)
-        # Restore UI: show video surface, reset preview, hide image buttons
+        # Restore UI: hide video surface, show episode preview, hide image buttons
         try:
-            self.video_surface.setVisible(True)
+            self.video_surface.setVisible(False)
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText("Episode Preview")
             self.preview_label.setVisible(True)
+            self.image_container.setVisible(False)
             self.back_btn.setVisible(False)
             self.next_btn.setVisible(False)
             self.position_slider.setVisible(True)
@@ -1121,31 +1237,120 @@ class DvdStylePlayer(QMainWindow):
 
     def _show_image(self, image_path):
         if os.path.exists(image_path):
-            pixmap = self._load_scaled_pixmap(image_path, self.preview_label.width())
+            pixmap = self._load_scaled_pixmap(image_path, self.image_container.width())
             if not pixmap.isNull():
                 if self.current_episode and self.current_episode.is_external_exe:
                     if not self._panels_visible:
                         # Panels hidden, fit screen
-                        scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                        scaled_pixmap = pixmap.scaled(self.image_container.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                     else:
                         # Panels shown, 600x600
                         scaled_pixmap = pixmap.scaled(QSize(600, 600), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 else:
-                    scaled_pixmap = pixmap.scaled(self.preview_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                self.preview_label.setPixmap(scaled_pixmap)
+                    scaled_pixmap = pixmap.scaled(self.image_container.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.current_image_label.setPixmap(scaled_pixmap)
         else:
-            self.preview_label.setPixmap(QPixmap())
-            self.preview_label.setText("Image not found")
+            self.current_image_label.setPixmap(QPixmap())
+            self.current_image_label.setText("Image not found")
+
+    def _animate_image_transition(self, direction):
+        """
+        Animate the image transition with sliding effect.
+
+        Args:
+            direction (str): 'left' for next (current slides left, next from right),
+                              'right' for prev (current slides right, next from left)
+        """
+        if self.animation_in_progress:
+            return
+        self.animation_in_progress = True
+        self.back_btn.setEnabled(False)
+        self.next_btn.setEnabled(False)
+
+        width = self.image_container.width()
+        if direction == 'left':
+            # Next image: current slides left to -width, next from width to 0
+            self.next_image_label.setGeometry(width, 0, width, self.image_container.height())
+            start_current = 0
+            end_current = -width
+            start_next = width
+            end_next = 0
+        else:  # 'right'
+            # Prev image: current slides right to width, next from -width to 0
+            self.next_image_label.setGeometry(-width, 0, width, self.image_container.height())
+            start_current = 0
+            end_current = width
+            start_next = -width
+            end_next = 0
+
+        # Create animations
+        self.current_anim = QPropertyAnimation(self.current_image_label, b"geometry")
+        self.current_anim.setDuration(500)  # 500ms
+        self.current_anim.setStartValue(QRect(start_current, 0, width, self.image_container.height()))
+        self.current_anim.setEndValue(QRect(end_current, 0, width, self.image_container.height()))
+        self.current_anim.setEasingCurve(QEasingCurve.InOutQuad)
+
+        self.next_anim = QPropertyAnimation(self.next_image_label, b"geometry")
+        self.next_anim.setDuration(500)
+        self.next_anim.setStartValue(QRect(start_next, 0, width, self.image_container.height()))
+        self.next_anim.setEndValue(QRect(end_next, 0, width, self.image_container.height()))
+        self.next_anim.setEasingCurve(QEasingCurve.InOutQuad)
+
+        # Connect finished signal
+        self.next_anim.finished.connect(self._on_animation_finished)
+
+        # Start animations
+        self.current_anim.start()
+        self.next_anim.start()
+
+    def _on_animation_finished(self):
+        """Called when image transition animation completes."""
+        # Swap labels
+        temp_pixmap = self.current_image_label.pixmap()
+        self.current_image_label.setPixmap(self.next_image_label.pixmap())
+        self.next_image_label.setPixmap(QPixmap())  # Clear next
+        self.current_image_label.setGeometry(0, 0, self.image_container.width(), self.image_container.height())
+        self.next_image_label.setGeometry(self.image_container.width(), 0, self.image_container.width(), self.image_container.height())
+        self.animation_in_progress = False
+        self.back_btn.setEnabled(True)
+        self.next_btn.setEnabled(True)
+
+    def _show_image_on_label(self, label, image_path):
+        """Helper to set image on a specific label."""
+        if os.path.exists(image_path):
+            pixmap = self._load_scaled_pixmap(image_path, self.image_container.width())
+            if not pixmap.isNull():
+                if self.current_episode and self.current_episode.is_external_exe:
+                    if not self._panels_visible:
+                        scaled_pixmap = pixmap.scaled(self.image_container.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    else:
+                        scaled_pixmap = pixmap.scaled(QSize(600, 600), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                else:
+                    scaled_pixmap = pixmap.scaled(self.image_container.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                label.setPixmap(scaled_pixmap)
+        else:
+            label.setPixmap(QPixmap())
+            label.setText("Image not found")
 
     def _prev_image(self):
-        if self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images:
-            self.current_image_index = (self.current_image_index - 1) % len(self.current_episode.images)
-            self._show_image(self.current_episode.resolved_images()[self.current_image_index])
+        if self.animation_in_progress or not (self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images):
+            return
+        old_index = self.current_image_index
+        self.current_image_index = (self.current_image_index - 1) % len(self.current_episode.images)
+        # Set next image on next_label
+        self._show_image_on_label(self.next_image_label, self.current_episode.resolved_images()[self.current_image_index])
+        # Animate right (prev)
+        self._animate_image_transition('right')
 
     def _next_image(self):
-        if self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images:
-            self.current_image_index = (self.current_image_index + 1) % len(self.current_episode.images)
-            self._show_image(self.current_episode.resolved_images()[self.current_image_index])
+        if self.animation_in_progress or not (self.current_episode and (self.current_episode.is_image() or self.current_episode.is_external_exe) and self.current_episode.images):
+            return
+        old_index = self.current_image_index
+        self.current_image_index = (self.current_image_index + 1) % len(self.current_episode.images)
+        # Set next image on next_label
+        self._show_image_on_label(self.next_image_label, self.current_episode.resolved_images()[self.current_image_index])
+        # Animate left (next)
+        self._animate_image_transition('left')
 
     def _toggle_subtitles(self, checked: bool):
         if not self.subtitle_button.isEnabled():
@@ -1311,6 +1516,8 @@ class DvdStylePlayer(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        # Update image label sizes
+        self._update_image_label_sizes()
         # Refresh episode list layout when window is resized
         current_season_item = self.season_list.currentItem()
         if current_season_item:
