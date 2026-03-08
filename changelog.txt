@@ -1,0 +1,206 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                Media Player                                  ║
+║                                 Changelog                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+FUTURE PLANS
+
+UPCOMING FEATURES
+• Playlist functionality
+• Advanced subtitle customization
+• Episode descriptions
+• Custom theme support
+• Network streaming capabilities
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 1.1.0 - March 8, 2026
+
+SECURITY & STABILITY
+• Disabled drag-and-drop for season/episode lists to prevent UI disruption
+
+DOCUMENTATION
+• Added comprehensive professional documentation to all code modules
+• Created detailed README.md with installation and usage instructions
+• Enhanced code comments and docstrings for better maintainability
+
+UI/UX IMPROVEMENTS
+• Prevented accidental reordering of media items
+• Maintained proper button positioning algorithm
+• Added image sliding animation
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 1.0.0 - January 21, 2026
+
+NEW FEATURES
+• DVD-style interface with season and episode browsing
+• Support for videos, audio, images, and external executables
+• Thumbnail previews for all media types
+• Subtitle support with toggle functionality
+• Fullscreen mode for immersive viewing
+• Volume and playback controls
+• Keyboard shortcuts for common actions
+
+IMPROVEMENTS
+• LRU cache for image thumbnails to improve performance
+• Robust path resolution for media files and subtitles
+• Automatic media duration detection
+• Responsive UI layout with collapsible panels
+
+BUG FIXES
+• Fixed image scaling issues with large thumbnails
+• Resolved subtitle path resolution problems
+• Improved error handling for missing media files
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.9.0 - December 29, 2025
+
+IMPROVEMENTS
+• Added comprehensive docstrings and comments throughout codebase
+• Improved code readability with detailed inline documentation
+• Enhanced PixmapCache class documentation explaining LRU behavior
+• Added descriptive comments for UI initialization and state management
+• Documented all major methods with clear purpose statements
+• Improved maintainability for future developers
+
+DOCUMENTATION
+• Added docstrings to PixmapCache, Episode, Season, and DvdStylePlayer classes
+• Documented key methods: _build_controls, _on_season_selected, _play_episode, main
+• Added comments explaining VLC initialization, layout setup, and event handling
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.8.0 - December 28, 2025
+
+BUG FIXES
+• Fixed episode selection resetting when window is resized or fullscreen is toggled
+• Preserved currently selected episode during layout refresh
+• Added logic to reselect the same episode after season list updates
+• Maintained playing episode state during fullscreen and resize operations
+
+UI/UX IMPROVEMENTS
+• Episode list now maintains selection state through window size changes
+• Smoother fullscreen transitions without disrupting playback flow
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.7.0 - December 26, 2025
+
+BUG FIXES
+• Fixed episode resetting to preview panel when fullscreen is toggled during video playback
+• Added check to keep video surface visible if video is currently playing
+• Preserved video playback state during fullscreen transitions
+• Prevented unwanted UI resets triggered by layout refresh
+
+IMPROVEMENTS
+• Video playback now continues seamlessly during fullscreen toggle
+• Better handling of UI state during window mode transitions
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.6.0 - December 24, 2025
+
+IMPROVEMENTS
+• Enhanced image scaling for exe episodes: allow up to 800x800, then dynamic based on available space
+• Simplified scaling rules: fit screen when panels hidden, 600x600 when panels shown
+• Reload image size instantly when hide/show panels button is clicked
+
+BUG FIXES
+• Resolved panel sizing issues for exe episodes on toggle
+• Improved image navigation and display consistency
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.5.0 - December 22, 2025
+
+NEW FEATURES
+• Exe episodes now display like image episodes with launch button
+• Added greyscale effect during exe execution
+• Integrated images into exe episodes in manifest
+
+UI/UX IMPROVEMENTS
+• Prevented exe UI glitches by isolating display logic
+• Show exe UI only when playing, display images in preview
+• Added stop button for panel access during exe viewing
+• Updated button labels (Start, Pause/Resume, Show Panels) with appropriate icons
+
+BUG FIXES
+• Fixed image scaling for exe episodes to prevent upscaling beyond limits
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.4.0 - December 9, 2025
+
+NEW FEATURES
+• Added support for external executable episodes (games) with launch functionality
+• Implemented image slideshows with navigation buttons for image episodes
+• Added hide/show controls for image episodes to focus on content
+• Display episode durations and season information in episode lists
+• Extended support for additional media formats (audio, images, exes)
+
+IMPROVEMENTS
+• Enhanced error handling and performance optimizations
+• Improved UI responsiveness for large media libraries
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.3.0 - November 29, 2025
+
+IMPROVEMENTS
+• Added LRU cache for thumbnails to improve performance
+• Reduced UI timer frequency for lower CPU usage
+
+BUG FIXES
+• Fixed subtitle toggle during playback without jump
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.2.0 - November 22, 2025
+
+NEW FEATURES
+• Added time display (current/total) on runtime bar
+• Hide/show side panels for larger video view
+• External executable support (e.g., games)
+• Subtitle button in controls
+
+IMPROVEMENTS
+• Automatic panel hiding on playback start
+• Deselect episodes on stop/end
+
+BUG FIXES
+• Fixed fullscreen issues with VLC fallback
+• Resolved UI freezing with external exes
+═══════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+Version 0.1.0 - November 19, 2025
+
+NEW FEATURES
+• Basic DVD-style player with seasons and episodes
+• Thumbnail support for episodes and seasons
+• Subtitle loading with toggle
+• Fullscreen and volume controls
+
+BUG FIXES
+• Fixed 256MB QPixmap limit by scaling during load
+• Improved subtitle path resolution
+═══════════════════════════════════════════════════════════════════════════════
+
+Thank you for using Media Player!
+
+For more information, visit the GitHub repository or check the README.md file.
+- Kyle Haynes
+
+__        ___ _   _                       _ 
+\ \      / (_) |_| |__   ___ _ __ ___  __| |
+ \ \ /\ / /| | __| '_ \ / _ \ '__/ _ \/ _` |
+  \ V  V / | | |_| | | |  __/ | |  __/ (_| |
+   \_/\_/  |_|\__|_| |_|\___|_|  \___|\__,_|
+   ____       _            _   _              
+  |  _ \  ___| |_ ___  ___| |_(_)_   _____    
+  | | | |/ _ \ __/ _ \/ __| __| \ \ / / _ \   
+  | |_| |  __/ ||  __/ (__| |_| |\ V /  __/   
+  |____/ \___|\__\___|\___|\__|_| \_/ \___|   
